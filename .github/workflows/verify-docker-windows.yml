@@ -20,7 +20,12 @@ permissions:
 jobs:
   verify-docker-windows:
     name: Build image + activate VIPM Pro in container
-    runs-on: windows-latest
+    # Pin to Windows Server 2022 (ltsc2022, kernel 10.0.20348). NI's LabVIEW
+    # Windows image is Server Core ltsc2022, so a 2022 host runs it with native
+    # process isolation. `windows-latest` now maps to Server 2025, which forces
+    # slower/less-reliable Hyper-V isolation (or a version-mismatch failure) for
+    # an ltsc2022 container; the 2022 runner also pre-caches the ltsc2022 bases.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
