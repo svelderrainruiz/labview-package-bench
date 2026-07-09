@@ -47,13 +47,14 @@ function findGitRoot(startDir: string): string | undefined {
 }
 
 function listArtifacts(root: string, ext: string): string[] {
+  const suffix = ext.toLowerCase();
   const found: string[] = [];
   const walk = (dir: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (entry.name === '.git' || entry.name === 'node_modules') continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
-      else if (entry.name.toLowerCase().endsWith(ext)) found.push(full);
+      else if (entry.name.toLowerCase().endsWith(suffix)) found.push(full);
     }
   };
   walk(root);
@@ -95,11 +96,16 @@ suite('package build (integration)', () => {
 
     // Do NOT delete pre-existing artifacts: a repo may hold checked-in packages
     // or local-feed inputs (a `.nipkg` can be a build input, not just an output),
-    // and this opt-in harness must never remove them. Instead, snapshot what
-    // exists and assert a *freshly* produced artifact — new by path, or rebuilt
-    // (newer mtime) — after the run.
-    const before = new Set(listArtifacts(mountRoot, artifactExt));
-    const startedAt = Date.now();
+    // and this opt-in harness must never remove them. Instead, snapshot each
+    // existing artifact's mtime and assert a *freshly* produced one — new by
+    // path, or rebuilt (its own mtime advanced). Comparing each file's post-run
+    // mtime against its own pre-run mtime (same filesystem) avoids wall-clock
+    // resolution/skew issues.
+    const before = new Map(
+      listArtifacts(mountRoot, artifactExt).map(
+        (artifact): [string, number] => [artifact, fs.statSync(artifact).mtimeMs]
+      )
+    );
 
     let output = '';
     const exitCode = await nodeProcessRunner.run(plan.invocation, {
@@ -109,9 +115,10 @@ suite('package build (integration)', () => {
       }
     });
 
-    const produced = listArtifacts(mountRoot, artifactExt).filter(
-      (artifact) => !before.has(artifact) || fs.statSync(artifact).mtimeMs >= startedAt
-    );
+    const produced = listArtifacts(mountRoot, artifactExt).filter((artifact) => {
+      const priorMtime = before.get(artifact);
+      return priorMtime === undefined || fs.statSync(artifact).mtimeMs > priorMtime;
+    });
 
     expect(output.length).toBeGreaterThan(0);
     expect(exitCode, `build failed:\n${output}`).toBe(0);
