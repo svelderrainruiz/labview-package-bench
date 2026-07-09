@@ -22,6 +22,10 @@ function readSettings(): PackageBenchSettings {
       cliPath: config.get('vipm.cliPath'),
       buildArgs: config.get('vipm.buildArgs')
     },
+    nipb: {
+      cliPath: config.get('nipb.cliPath'),
+      buildArgs: config.get('nipb.buildArgs')
+    },
     docker: {
       image: config.get('docker.image'),
       containerWorkdir: config.get('docker.containerWorkdir'),

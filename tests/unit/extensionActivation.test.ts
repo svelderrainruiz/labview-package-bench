@@ -143,4 +143,23 @@ describe('extension activation', () => {
     expect(showInformationMessageMock).toHaveBeenCalledWith(expect.stringContaining('succeeded'));
     expect(outputChannels[0].lines.join('\n')).toContain('Building lib.vipb');
   });
+
+  it('builds an NI .pbs via native-windows using the configured NipbCli path', async () => {
+    const invocations: CommandInvocation[] = [];
+    const run = vi.fn(async (invocation: CommandInvocation) => {
+      invocations.push(invocation);
+      return 0;
+    });
+    configState.values = {
+      defaultProvider: 'native-windows',
+      'nipb.cliPath': 'C:\\custom\\NipbCli.exe'
+    };
+
+    activate(createContext() as ActivateContext, { runner: { run } });
+    await invokeCommand({ fsPath: '/repo/src/Solution.pbs' });
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(invocations[0].command).toBe('C:\\custom\\NipbCli.exe');
+    expect(invocations[0].args).toEqual(['-o=/repo/src/Solution.pbs', '-b=packages', '--save']);
+  });
 });

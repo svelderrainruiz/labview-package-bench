@@ -177,6 +177,7 @@
     "vscode:prepublish": "npm run compile",
     "package": "vsce package",
     "compile": "tsc -p .",
+    "watch": "tsc -p . --watch",
     "check": "tsc -p . --noEmit",
     "customization:audit": "node scripts/auditCustomizationGovernance.js",
     "fleet:generate": "node scripts/generateAgentFleet.js",
