@@ -1,3 +1,4 @@
+import type { PackageType } from './packageBuildRequest';
 import type { CommandInvocation } from './vipmCliBuild';
 
 /**
@@ -19,5 +20,8 @@ export interface BuildProvider {
   id: 'native-windows' | 'docker-windows' | 'docker-linux';
   label: string;
   description: string;
+  /** Package types this environment can build. NI packages require the NI
+   * Package Builder CLI, which only the native Windows host provides today. */
+  supportedPackageTypes: readonly PackageType[];
   resolveInvocation(context: ProviderBuildContext): CommandInvocation;
 }

@@ -25,6 +25,7 @@ export function createDockerWindowsProvider(settings: DockerProviderSettings): B
     id: 'docker-windows',
     label: 'Docker Windows container',
     description: `Runs the build inside ${settings.image}.`,
+    supportedPackageTypes: ['vi'],
     resolveInvocation(context: ProviderBuildContext) {
       const relativeSpec = relativeFromRoot(context.mountRoot, context.specPath).replace(/\//g, '\\');
       const containerSpecPath = joinWindowsPath(settings.containerWorkdir, relativeSpec);

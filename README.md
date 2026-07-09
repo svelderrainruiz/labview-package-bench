@@ -1,6 +1,6 @@
 # LabVIEW Package Bench
 
-A VS Code extension for building **VI packages** and **NI packages** from `.vipb` / `.nipb` build
+A VS Code extension for building **VI packages** and **NI packages** from `.vipb` and `.pbs` build
 specs, orchestrated across isolated LabVIEW environments. It is deliberately decoupled from
 VI-history review tooling so package-building concerns evolve on their own.
 
@@ -11,16 +11,21 @@ VI-history review tooling so package-building concerns evolve on their own.
 
 ## What it does (Milestone 1)
 
-- Adds a **Build Package** command to the editor and Explorer context menus for `.vipb` and `.nipb`
-  files (and the Command Palette).
+- Adds a **Build Package** command to the editor and Explorer context menus for `.vipb`, `.pbs`,
+  and `.nipb` files (and the Command Palette).
 - Builds a **VI package** from a `.vipb` spec by invoking the JKI VIPM CLI.
+- Builds an **NI package** from a `.pbs` NI Package Builder solution via the NI Package Builder CLI
+  (`NipbCli`) on the native Windows host.
 - Lets you pick the **build environment** per build, or pin one:
   - `native-windows` — runs the VIPM CLI directly on a Windows host. **Verified** on LabVIEW 2026 (64-bit and 32-bit) + VIPM.
   - `docker-linux` — runs the build inside the baked NI LabVIEW **Linux** container (works on Codespaces, Linux CI, and local Docker). Proven end-to-end.
   - `docker-windows` — runs the build inside a derived NI LabVIEW **Windows** container image (VIPM baked in).
 - Streams build output to a dedicated **LabVIEW Package Bench** output channel.
 
-NI package builds (`.nipb`) are recognized and reserved for a later milestone.
+NI package builds run from a `.pbs` NI Package Builder solution via the NI Package Builder CLI
+(`NipbCli`) on the **`native-windows`** provider only — NI Package Builder is a Windows desktop tool
+and is not in the container images. Set `labviewPackageBench.nipb.cliPath` if `NipbCli.exe` is not at
+the default install path. `.nipb` is still accepted as a legacy alias for the spec name.
 
 ## Requirements
 

@@ -7,6 +7,7 @@ import {
 import { baseName, parentDir } from '../packaging/pathUtil';
 import type { PackageBenchSettings } from '../packaging/settings';
 import type { BuildProvider } from '../packaging/buildProvider';
+import { buildNipbInvocation } from '../packaging/niPackageBuild';
 import {
   buildVipmInvocation,
   renderInvocation,
@@ -64,14 +65,17 @@ export function planBuildInvocation(
   settings: PackageBenchSettings
 ): BuildPlan {
   const request = createPackageBuildRequest(specPath);
-  const base = buildVipmInvocation(
-    {
-      specPath,
-      labviewVersion: settings.labview.version,
-      labviewBitness: settings.labview.bitness
-    },
-    settings.vipm
-  );
+  const base =
+    request.packageType === 'ni'
+      ? buildNipbInvocation({ specPath }, settings.nipb)
+      : buildVipmInvocation(
+          {
+            specPath,
+            labviewVersion: settings.labview.version,
+            labviewBitness: settings.labview.bitness
+          },
+          settings.vipm
+        );
   const specDir = parentDir(specPath);
   const invocation = provider.resolveInvocation({ specPath, specDir, mountRoot, base });
   return { request, provider, invocation, specDir };
@@ -92,18 +96,20 @@ export async function runBuildPackage(
 
   const packageType = detectPackageType(specPath);
   if (packageType === 'unknown') {
-    deps.showError(`${baseName(specPath)} is not a .vipb or .nipb build spec.`);
+    deps.showError(`${baseName(specPath)} is not a .vipb, .pbs, or .nipb build spec.`);
     return { status: 'unsupported' };
   }
 
-  if (packageType === 'ni') {
-    deps.showInfo(
-      'NI package builds arrive in a later milestone. VI packages (.vipb) are supported today.'
+  const providers = getBuildProviders(settings).filter((candidate) =>
+    candidate.supportedPackageTypes.includes(packageType)
+  );
+  if (providers.length === 0) {
+    deps.showError(
+      `No build environment can build ${describePackageType(packageType)}. NI packages require the native Windows host (NI Package Builder).`
     );
-    return { status: 'deferred' };
+    return { status: 'unsupported' };
   }
 
-  const providers = getBuildProviders(settings);
   const provider =
     resolveConfiguredProvider(settings, providers) ?? (await deps.pickProvider(providers));
   if (!provider) {
@@ -111,6 +117,7 @@ export async function runBuildPackage(
   }
 
   const plan = planBuildInvocation(specPath, deps.resolveMountRoot(specPath), provider, settings);
+  const kind = packageType === 'ni' ? 'NI package' : 'VI package';
   deps.log.clear();
   deps.log.show();
   deps.log.appendLine(
@@ -126,17 +133,17 @@ export async function runBuildPackage(
 
     if (exitCode === 0) {
       deps.log.appendLine('\nBuild succeeded.');
-      deps.showInfo(`VI package build succeeded: ${baseName(specPath)}`);
+      deps.showInfo(`${kind} build succeeded: ${baseName(specPath)}`);
       return { status: 'succeeded', exitCode };
     }
 
     deps.log.appendLine(`\nBuild failed (exit code ${exitCode}).`);
-    deps.showError(`VI package build failed (exit code ${exitCode}).`);
+    deps.showError(`${kind} build failed (exit code ${exitCode}).`);
     return { status: 'failed', exitCode };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     deps.log.appendLine(`\nBuild error: ${message}`);
-    deps.showError(`VI package build error: ${message}`);
+    deps.showError(`${kind} build error: ${message}`);
     return { status: 'error', message };
   }
 }

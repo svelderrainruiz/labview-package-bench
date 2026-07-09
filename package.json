@@ -50,14 +50,14 @@
         {
           "command": "labviewPackageBench.buildPackage",
           "group": "3_compare",
-          "when": "(resourceExtname == .vipb || resourceExtname == .nipb || resourceFilename == .vipb || resourceFilename == .nipb) && isWorkspaceTrusted"
+          "when": "(resourceExtname == .vipb || resourceExtname == .pbs || resourceExtname == .nipb || resourceFilename == .vipb || resourceFilename == .pbs || resourceFilename == .nipb) && isWorkspaceTrusted"
         }
       ],
       "editor/title/context": [
         {
           "command": "labviewPackageBench.buildPackage",
           "group": "3_compare",
-          "when": "(resourceExtname == .vipb || resourceExtname == .nipb || resourceFilename == .vipb || resourceFilename == .nipb) && isWorkspaceTrusted"
+          "when": "(resourceExtname == .vipb || resourceExtname == .pbs || resourceExtname == .nipb || resourceFilename == .vipb || resourceFilename == .pbs || resourceFilename == .nipb) && isWorkspaceTrusted"
         }
       ],
       "commandPalette": [
@@ -116,6 +116,23 @@
             "--verbose"
           ],
           "markdownDescription": "Argument template passed to the VIPM CLI. Tokens `${specPath}`, `${labviewVersion}`, and `${labviewBitness}` are substituted at build time."
+        },
+        "labviewPackageBench.nipb.cliPath": {
+          "type": "string",
+          "default": "C:\\Program Files\\National Instruments\\Package Builder\\NipbCli.exe",
+          "markdownDescription": "Path to the NI Package Builder CLI (`NipbCli.exe`) used to build NI packages from a `.pbs` solution. NI package builds run on the native Windows host only."
+        },
+        "labviewPackageBench.nipb.buildArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "-o=${specPath}",
+            "-b=packages",
+            "--save"
+          ],
+          "markdownDescription": "Argument template passed to `NipbCli`. The `${specPath}` token is replaced with the absolute path to the `.pbs` NI Package Builder solution at build time."
         },
         "labviewPackageBench.docker.image": {
           "type": "string",

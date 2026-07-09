@@ -28,6 +28,7 @@ export function createDockerLinuxProvider(settings: LinuxContainerSettings): Bui
     id: 'docker-linux',
     label: 'Docker Linux container (NI LabVIEW image)',
     description: `Runs the build inside ${settings.image}.`,
+    supportedPackageTypes: ['vi'],
     resolveInvocation(context: ProviderBuildContext) {
       const containerSpecPath = `${CONTAINER_WORKDIR}/${relativeFromRoot(
         context.mountRoot,
