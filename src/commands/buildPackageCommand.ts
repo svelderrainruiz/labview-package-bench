@@ -81,6 +81,22 @@ export function planBuildInvocation(
   return { request, provider, invocation, specDir };
 }
 
+/** A clearer message when a build tool cannot be launched (missing CLI/Docker). */
+function describeLaunchFailure(command: string, message: string): string | undefined {
+  if (/\bENOENT\b/i.test(message)) {
+    return `Could not launch "${command}". Make sure it is installed and on PATH — set labviewPackageBench.vipm.cliPath or nipb.cliPath to the full CLI path, or start Docker Desktop for a container build.`;
+  }
+  return undefined;
+}
+
+/** A clearer hint for a recognizable failure signature in the tool output. */
+function describeBuildFailure(output: string): string | undefined {
+  if (/public git repository|not inside a git repository|not a git repository/i.test(output)) {
+    return 'The build spec must live inside a public git repository for VIPM Community Edition. Open the repository root as your workspace folder, or activate VIPM Professional.';
+  }
+  return undefined;
+}
+
 export async function runBuildPackage(
   target: unknown,
   activeEditorPath: string | undefined,
@@ -129,10 +145,14 @@ export async function runBuildPackage(
   }
   deps.log.appendLine(`> ${renderInvocation(plan.invocation)}`);
 
+  let capturedOutput = '';
   try {
     const exitCode = await deps.runner.run(plan.invocation, {
       cwd: plan.specDir,
-      onOutput: (chunk) => deps.log.append(chunk),
+      onOutput: (chunk) => {
+        capturedOutput += chunk;
+        deps.log.append(chunk);
+      },
       signal
     });
 
@@ -148,12 +168,19 @@ export async function runBuildPackage(
     }
 
     deps.log.appendLine(`\nBuild failed (exit code ${exitCode}).`);
-    deps.showError(`${kind} build failed (exit code ${exitCode}).`);
+    const failureHint = describeBuildFailure(capturedOutput);
+    deps.showError(
+      failureHint
+        ? `${kind} build failed (exit code ${exitCode}). ${failureHint}`
+        : `${kind} build failed (exit code ${exitCode}).`
+    );
     return { status: 'failed', exitCode };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     deps.log.appendLine(`\nBuild error: ${message}`);
-    deps.showError(`${kind} build error: ${message}`);
+    deps.showError(
+      describeLaunchFailure(plan.invocation.command, message) ?? `${kind} build error: ${message}`
+    );
     return { status: 'error', message };
   }
 }

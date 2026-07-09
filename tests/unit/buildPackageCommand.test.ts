@@ -20,6 +20,7 @@ interface HarnessOptions {
   settings?: PackageBenchSettings;
   exitCode?: number;
   throwMessage?: string;
+  output?: string;
   pick?: (providers: BuildProvider[]) => BuildProvider | undefined;
 }
 
@@ -37,7 +38,7 @@ function makeHarness(options: HarnessOptions = {}) {
   const runner: ProcessRunner = {
     run: vi.fn(async (invocation: CommandInvocation, runOptions) => {
       captured.runInvocations.push(invocation);
-      runOptions.onOutput('build log line\n');
+      runOptions.onOutput(options.output ?? 'build log line\n');
       if (options.throwMessage) {
         throw new Error(options.throwMessage);
       }
@@ -213,5 +214,26 @@ describe('runBuildPackage', () => {
     );
     expect(outcome).toEqual({ status: 'cancelled' });
     expect(captured.lines.some((line) => line.includes('cancelled'))).toBe(true);
+  });
+
+  it('explains a missing CLI (ENOENT) with an actionable message', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      throwMessage: 'spawn vipm ENOENT'
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\a.vipb' }, undefined, deps);
+    expect(outcome.status).toBe('error');
+    expect(captured.errors[0]).toMatch(/installed and on PATH/i);
+  });
+
+  it('explains a VIPM Community git-repository failure', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      exitCode: 6,
+      output: 'error: VIPM Community Edition requires a public Git repository.\n'
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({ status: 'failed', exitCode: 6 });
+    expect(captured.errors[0]).toMatch(/public git repository/i);
   });
 });
