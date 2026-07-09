@@ -39,6 +39,13 @@ jobs:
           VIPM_SERIAL_NUMBER: ${{ secrets.VIPM_SERIAL_NUMBER }}
           VIPM_FULL_NAME: ${{ secrets.VIPM_FULL_NAME }}
           VIPM_EMAIL: ${{ secrets.VIPM_EMAIL }}
+        # `VIPM_COMMUNITY_EDITION=false` overrides the image default (the
+        # Dockerfile bakes it `true` for the Community-Edition provider path,
+        # which requires running inside a public git repo). This provisioning
+        # verify activates a real Pro serial, so it runs in Pro mode where
+        # refresh/install work without a git repo — matching JKI's documented
+        # container flow (activate Pro -> refresh -> install).
+        #
         # Single-quote the container script so the outer runner bash passes it
         # through literally; the container's bash then expands $VIPM_* (secrets
         # forwarded by name) and the double quotes keep the spaced full name a
@@ -46,6 +53,7 @@ jobs:
         # LabVIEW before exec'ing this script. A successful `install` + a `list`
         # that shows the package is the pass/fail assertion.
         run: >
-          docker run --rm -e VIPM_SERIAL_NUMBER -e VIPM_FULL_NAME -e VIPM_EMAIL -e VIPM_NONINTERACTIVE=1
+          docker run --rm -e VIPM_SERIAL_NUMBER -e VIPM_FULL_NAME -e VIPM_EMAIL
+          -e VIPM_NONINTERACTIVE=1 -e VIPM_COMMUNITY_EDITION=false
           labview-package-bench-linux:latest
           bash -c 'vipm activate --serial-number "$VIPM_SERIAL_NUMBER" --name "$VIPM_FULL_NAME" --email "$VIPM_EMAIL" && vipm refresh && vipm install -y oglib_boolean && vipm list --installed | grep -qi oglib_boolean'
