@@ -41,6 +41,7 @@
     "color": "#0E3A5F",
     "theme": "dark"
   },
+  "icon": "images/icon.png",
   "main": "./out/extension.js",
   "activationEvents": [
     "onStartupFinished"
