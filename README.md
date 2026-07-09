@@ -107,11 +107,11 @@ activates VIPM Pro, runs `vipm refresh`, warms LabVIEW headless (`LabVIEW.exe --
 for its VI Server port), then runs the build.
 
 > **Status:** the image build, VIPM Pro activation, `vipm refresh`, and the headless LabVIEW
-> launch + VI Server connection are verified, and VIPM starts the build inside the container.
-> Completing the in-container **packaging** step is still being hardened — upstream VIPM
-> Windows-container builds are maturing, and a spec whose LabVIEW version differs from the
-> container's forces a headless recompile that can stall. Use **`native-windows`** for a verified
-> `.vip` today.
+> launch + VI Server connection are all verified, and VIPM **starts** the build inside the
+> container. The `vipm build` (`vipb_build`) step then makes no progress — reproduced even with a
+> source mass-compiled to the container's LabVIEW 2026, so it is **not** the version-mismatch
+> recompile but the in-container VIPM build step itself, which upstream VIPM still lists as
+> maturing for Windows containers. Use **`native-windows`** for a verified `.vip` today.
 
 ## Development
 
