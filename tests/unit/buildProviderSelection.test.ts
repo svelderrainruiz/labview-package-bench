@@ -6,28 +6,39 @@ import { getBuildProviders, resolveConfiguredProvider } from '../../src/provider
 
 const settings = DEFAULT_SETTINGS;
 
+function baseFor(specPath: string) {
+  return buildVipmInvocation({ specPath, labviewVersion: '2026', labviewBitness: '64' }, settings.vipm);
+}
+
 describe('build providers', () => {
-  it('exposes the native and docker Windows providers in order', () => {
+  it('exposes native, docker-windows, and docker-linux providers in order', () => {
     expect(getBuildProviders(settings).map((provider) => provider.id)).toEqual([
       'native-windows',
-      'docker-windows'
+      'docker-windows',
+      'docker-linux'
     ]);
   });
 
   it('runs the base invocation unchanged on the native host', () => {
     const [native] = getBuildProviders(settings);
-    const base = buildVipmInvocation('C:\\w\\a.vipb', settings.vipm);
-    expect(native.resolveInvocation({ specPath: 'C:\\w\\a.vipb', specDir: 'C:\\w', base })).toEqual(
-      base
-    );
+    const base = baseFor('C:\\repo\\src\\a.vipb');
+    expect(
+      native.resolveInvocation({
+        specPath: 'C:\\repo\\src\\a.vipb',
+        specDir: 'C:\\repo\\src',
+        mountRoot: 'C:\\repo',
+        base
+      })
+    ).toEqual(base);
   });
 
-  it('wraps the invocation in docker run and rewrites the spec path into the container', () => {
+  it('mounts the repo root in a Windows docker run and rewrites the spec path', () => {
     const docker = getBuildProviders(settings)[1];
-    const base = buildVipmInvocation('C:\\w\\a.vipb', settings.vipm);
+    const base = baseFor('C:\\repo\\src\\a.vipb');
     const invocation = docker.resolveInvocation({
-      specPath: 'C:\\w\\a.vipb',
-      specDir: 'C:\\w',
+      specPath: 'C:\\repo\\src\\a.vipb',
+      specDir: 'C:\\repo\\src',
+      mountRoot: 'C:\\repo',
       base
     });
 
@@ -36,13 +47,50 @@ describe('build providers', () => {
       'run',
       '--rm',
       '-v',
-      'C:\\w:C:\\work',
+      'C:\\repo:C:\\work',
       '-w',
       'C:\\work',
       'labview-package-bench-windows:latest',
       'vipm',
       'build',
-      'C:\\work\\a.vipb'
+      'C:\\work\\src\\a.vipb',
+      '--labview-version',
+      '2026',
+      '--labview-bitness',
+      '64',
+      '--show-progress',
+      '--verbose'
+    ]);
+  });
+
+  it('mounts the repo root in a Linux docker run against the NI image', () => {
+    const dockerLinux = getBuildProviders(settings)[2];
+    const base = baseFor('/home/u/repo/src/a.vipb');
+    const invocation = dockerLinux.resolveInvocation({
+      specPath: '/home/u/repo/src/a.vipb',
+      specDir: '/home/u/repo/src',
+      mountRoot: '/home/u/repo',
+      base
+    });
+
+    expect(invocation.command).toBe('docker');
+    expect(invocation.args).toEqual([
+      'run',
+      '--rm',
+      '-v',
+      '/home/u/repo:/work',
+      '-w',
+      '/work',
+      'labview-package-bench-linux:latest',
+      'lvpb-vipm-build',
+      'build',
+      '/work/src/a.vipb',
+      '--labview-version',
+      '2026',
+      '--labview-bitness',
+      '64',
+      '--show-progress',
+      '--verbose'
     ]);
   });
 
@@ -50,10 +98,10 @@ describe('build providers', () => {
     const providers = getBuildProviders(settings);
     expect(
       resolveConfiguredProvider(
-        normalizePackageBenchSettings({ defaultProvider: 'docker-windows' }),
+        normalizePackageBenchSettings({ defaultProvider: 'docker-linux' }),
         providers
       )?.id
-    ).toBe('docker-windows');
+    ).toBe('docker-linux');
     expect(
       resolveConfiguredProvider(normalizePackageBenchSettings({ defaultProvider: 'ask' }), providers)
     ).toBeUndefined();

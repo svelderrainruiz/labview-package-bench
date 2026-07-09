@@ -75,10 +75,25 @@
           "enum": [
             "ask",
             "native-windows",
-            "docker-windows"
+            "docker-windows",
+            "docker-linux"
           ],
           "default": "ask",
           "markdownDescription": "Build environment to use. `ask` prompts for a provider on each build."
+        },
+        "labviewPackageBench.labview.version": {
+          "type": "string",
+          "default": "2026",
+          "markdownDescription": "LabVIEW version year passed to `vipm build --labview-version` (e.g. `2026`)."
+        },
+        "labviewPackageBench.labview.bitness": {
+          "type": "string",
+          "enum": [
+            "64",
+            "32"
+          ],
+          "default": "64",
+          "markdownDescription": "LabVIEW bitness passed to `vipm build --labview-bitness`."
         },
         "labviewPackageBench.vipm.cliPath": {
           "type": "string",
@@ -92,9 +107,15 @@
           },
           "default": [
             "build",
-            "${specPath}"
+            "${specPath}",
+            "--labview-version",
+            "${labviewVersion}",
+            "--labview-bitness",
+            "${labviewBitness}",
+            "--show-progress",
+            "--verbose"
           ],
-          "markdownDescription": "Argument template passed to the VIPM CLI. `${specPath}` is replaced with the absolute path to the `.vipb` build spec."
+          "markdownDescription": "Argument template passed to the VIPM CLI. Tokens `${specPath}`, `${labviewVersion}`, and `${labviewBitness}` are substituted at build time."
         },
         "labviewPackageBench.docker.image": {
           "type": "string",
@@ -105,6 +126,11 @@
           "type": "string",
           "default": "C:\\\\work",
           "markdownDescription": "Working directory inside the Windows container where the build spec directory is mounted."
+        },
+        "labviewPackageBench.linuxContainer.image": {
+          "type": "string",
+          "default": "labview-package-bench-linux:latest",
+          "markdownDescription": "NI LabVIEW Linux container image (with VIPM baked in, see `docker/Dockerfile`) used by the `docker-linux` provider."
         }
       }
     }
@@ -118,7 +144,8 @@
     "fleet:check": "node scripts/generateAgentFleet.js --check",
     "pretest": "npm run compile",
     "test": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "image:build:linux": "docker build -t labview-package-bench-linux:latest docker"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",

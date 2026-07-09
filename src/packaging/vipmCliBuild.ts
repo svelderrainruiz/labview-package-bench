@@ -16,19 +16,31 @@ export interface VipmBuildSettings {
   buildArgs: string[];
 }
 
-export const SPEC_PATH_TOKEN = '${specPath}';
+export interface VipmBuildTokens {
+  specPath: string;
+  labviewVersion: string;
+  labviewBitness: string;
+}
 
-export function substituteSpecPath(args: string[], specPath: string): string[] {
-  return args.map((arg) => arg.split(SPEC_PATH_TOKEN).join(specPath));
+const TOKEN_REPLACEMENTS: ReadonlyArray<{ token: string; key: keyof VipmBuildTokens }> = [
+  { token: '${specPath}', key: 'specPath' },
+  { token: '${labviewVersion}', key: 'labviewVersion' },
+  { token: '${labviewBitness}', key: 'labviewBitness' }
+];
+
+export function substituteTokens(args: string[], tokens: VipmBuildTokens): string[] {
+  return args.map((arg) =>
+    TOKEN_REPLACEMENTS.reduce((current, { token, key }) => current.split(token).join(tokens[key]), arg)
+  );
 }
 
 export function buildVipmInvocation(
-  specPath: string,
+  tokens: VipmBuildTokens,
   settings: VipmBuildSettings
 ): CommandInvocation {
   return {
     command: settings.cliPath,
-    args: substituteSpecPath(settings.buildArgs, specPath)
+    args: substituteTokens(settings.buildArgs, tokens)
   };
 }
 

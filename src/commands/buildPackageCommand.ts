@@ -18,6 +18,7 @@ import type { BuildLog } from '../ui/buildOutputChannel';
 
 export interface BuildPackageDeps {
   readSettings(): PackageBenchSettings;
+  resolveMountRoot(specPath: string): string;
   pickProvider(providers: BuildProvider[]): Promise<BuildProvider | undefined>;
   runner: ProcessRunner;
   log: BuildLog;
@@ -58,13 +59,21 @@ export function extractSpecPath(
 
 export function planBuildInvocation(
   specPath: string,
+  mountRoot: string,
   provider: BuildProvider,
   settings: PackageBenchSettings
 ): BuildPlan {
   const request = createPackageBuildRequest(specPath);
-  const base = buildVipmInvocation(specPath, settings.vipm);
+  const base = buildVipmInvocation(
+    {
+      specPath,
+      labviewVersion: settings.labview.version,
+      labviewBitness: settings.labview.bitness
+    },
+    settings.vipm
+  );
   const specDir = parentDir(specPath);
-  const invocation = provider.resolveInvocation({ specPath, specDir, base });
+  const invocation = provider.resolveInvocation({ specPath, specDir, mountRoot, base });
   return { request, provider, invocation, specDir };
 }
 
@@ -101,7 +110,7 @@ export async function runBuildPackage(
     return { status: 'cancelled' };
   }
 
-  const plan = planBuildInvocation(specPath, provider, settings);
+  const plan = planBuildInvocation(specPath, deps.resolveMountRoot(specPath), provider, settings);
   deps.log.clear();
   deps.log.show();
   deps.log.appendLine(

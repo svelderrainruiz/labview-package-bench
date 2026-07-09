@@ -51,6 +51,7 @@ function makeHarness(options: HarnessOptions = {}) {
 
   const deps: BuildPackageDeps = {
     readSettings: () => settings,
+    resolveMountRoot: (specPath: string) => specPath.replace(/[\\/][^\\/]*$/, ''),
     pickProvider,
     runner,
     log: {
@@ -86,9 +87,21 @@ describe('extractSpecPath', () => {
 describe('planBuildInvocation', () => {
   it('plans a native build that runs the base invocation', () => {
     const [native] = getBuildProviders(DEFAULT_SETTINGS);
-    const plan = planBuildInvocation('C:\\w\\a.vipb', native, DEFAULT_SETTINGS);
+    const plan = planBuildInvocation('C:\\w\\a.vipb', 'C:\\w', native, DEFAULT_SETTINGS);
     expect(plan.specDir).toBe('C:\\w');
-    expect(plan.invocation).toEqual({ command: 'vipm', args: ['build', 'C:\\w\\a.vipb'] });
+    expect(plan.invocation).toEqual({
+      command: 'vipm',
+      args: [
+        'build',
+        'C:\\w\\a.vipb',
+        '--labview-version',
+        '2026',
+        '--labview-bitness',
+        '64',
+        '--show-progress',
+        '--verbose'
+      ]
+    });
   });
 });
 

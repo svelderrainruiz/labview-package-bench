@@ -2,9 +2,14 @@ import type { BuildProvider } from '../packaging/buildProvider';
 import type { PackageBenchSettings } from '../packaging/settings';
 import { nativeWindowsProvider } from './nativeWindowsProvider';
 import { createDockerWindowsProvider } from './dockerWindowsProvider';
+import { createDockerLinuxProvider } from './dockerLinuxProvider';
 
 export function getBuildProviders(settings: PackageBenchSettings): BuildProvider[] {
-  return [nativeWindowsProvider, createDockerWindowsProvider(settings.docker)];
+  return [
+    nativeWindowsProvider,
+    createDockerWindowsProvider(settings.docker),
+    createDockerLinuxProvider(settings.linuxContainer)
+  ];
 }
 
 export function resolveConfiguredProvider(

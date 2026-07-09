@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import { runBuildPackage, type BuildPackageDeps } from './commands/buildPackageCommand';
@@ -12,6 +14,10 @@ function readSettings(): PackageBenchSettings {
   const config = vscode.workspace.getConfiguration('labviewPackageBench');
   return normalizePackageBenchSettings({
     defaultProvider: config.get('defaultProvider'),
+    labview: {
+      version: config.get('labview.version'),
+      bitness: config.get('labview.bitness')
+    },
     vipm: {
       cliPath: config.get('vipm.cliPath'),
       buildArgs: config.get('vipm.buildArgs')
@@ -19,8 +25,28 @@ function readSettings(): PackageBenchSettings {
     docker: {
       image: config.get('docker.image'),
       containerWorkdir: config.get('docker.containerWorkdir')
+    },
+    linuxContainer: {
+      image: config.get('linuxContainer.image')
     }
   });
+}
+
+function resolveMountRoot(specPath: string): string {
+  // VIPM Community Edition requires the working directory to sit inside a public
+  // git repo, so bind-mount the nearest ancestor that contains a `.git` entry.
+  let current = path.dirname(specPath);
+  let previous = '';
+  while (current && current !== previous) {
+    if (fs.existsSync(path.join(current, '.git'))) {
+      return current;
+    }
+    previous = current;
+    current = path.dirname(current);
+  }
+
+  const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(specPath));
+  return folder?.uri.fsPath ?? path.dirname(specPath);
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -29,6 +55,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const deps: BuildPackageDeps = {
     readSettings,
+    resolveMountRoot,
     pickProvider: pickBuildProvider,
     runner: nodeProcessRunner,
     log: createOutputChannelBuildLog(channel),

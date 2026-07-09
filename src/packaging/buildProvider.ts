@@ -9,11 +9,14 @@ import type { CommandInvocation } from './vipmCliBuild';
 export interface ProviderBuildContext {
   specPath: string;
   specDir: string;
+  /** Directory bind-mounted into container providers; the git repo root that
+   * VIPM Community Edition requires for its public-repository check. */
+  mountRoot: string;
   base: CommandInvocation;
 }
 
 export interface BuildProvider {
-  id: 'native-windows' | 'docker-windows';
+  id: 'native-windows' | 'docker-windows' | 'docker-linux';
   label: string;
   description: string;
   resolveInvocation(context: ProviderBuildContext): CommandInvocation;
