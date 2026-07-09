@@ -24,6 +24,7 @@ All notable changes to this project are documented here.
 ### Changed
 - **`native-windows` provider verified end-to-end** on a Windows host with LabVIEW 2026 (64-bit and 32-bit) + VIPM. The README documents the required setup: `vipm` on `PATH` (or `vipm.cliPath` to the full path), LabVIEW VI Server *Exported VIs* / *Machine Access*, and running VS Code elevated so VIPM matches an elevated LabVIEW.
 - The container providers now log a build advisory: in-container package **building** is an upstream VIPM preview and may not complete headlessly, so `native-windows` stays the verified build path. The containers remain proven for dependency install/refresh (`docker-linux`).
+- Build errors are clearer: a missing CLI or Docker (spawn `ENOENT`) explains how to fix it (install it, set `vipm.cliPath` / `nipb.cliPath`, or start Docker Desktop), and a VIPM Community git-repository failure points to opening the repository root or activating VIPM Professional.
 
 ### Fixed
 - NI build settings are now honored: `labviewPackageBench.nipb.cliPath` and `nipb.buildArgs` are read from the workspace configuration (the extension previously ignored them and always used the defaults).
