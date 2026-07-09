@@ -17,12 +17,6 @@ export function parentDir(inputPath: string): string {
   return lastSeparator < 0 ? '' : inputPath.slice(0, lastSeparator);
 }
 
-export function fileExtension(inputPath: string): string {
-  const name = baseName(inputPath);
-  const dotIndex = name.lastIndexOf('.');
-  return dotIndex <= 0 ? '' : name.slice(dotIndex).toLowerCase();
-}
-
 export function joinWindowsPath(directory: string, name: string): string {
   const trimmed = directory.replace(/[\\/]+$/, '');
   return `${trimmed}\\${name}`;

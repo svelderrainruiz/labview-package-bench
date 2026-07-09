@@ -1,4 +1,4 @@
-import { fileExtension } from './pathUtil';
+import { baseName } from './pathUtil';
 
 /**
  * The kind of package a build spec produces.
@@ -20,7 +20,12 @@ const EXTENSION_TYPE_MAP: Record<string, PackageType> = {
 };
 
 export function detectPackageType(specPath: string): PackageType {
-  return EXTENSION_TYPE_MAP[fileExtension(specPath)] ?? 'unknown';
+  // Match by filename suffix so a bare dotfile spec (e.g. `.vipb`, which some
+  // repositories use to name their build spec) is recognized, not only the
+  // `Name.vipb` form.
+  const name = baseName(specPath).toLowerCase();
+  const extension = Object.keys(EXTENSION_TYPE_MAP).find((candidate) => name.endsWith(candidate));
+  return extension ? EXTENSION_TYPE_MAP[extension] : 'unknown';
 }
 
 export function createPackageBuildRequest(specPath: string): PackageBuildRequest {

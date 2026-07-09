@@ -50,14 +50,14 @@
         {
           "command": "labviewPackageBench.buildPackage",
           "group": "3_compare",
-          "when": "(resourceExtname == .vipb || resourceExtname == .nipb) && isWorkspaceTrusted"
+          "when": "(resourceExtname == .vipb || resourceExtname == .nipb || resourceFilename == .vipb || resourceFilename == .nipb) && isWorkspaceTrusted"
         }
       ],
       "editor/title/context": [
         {
           "command": "labviewPackageBench.buildPackage",
           "group": "3_compare",
-          "when": "(resourceExtname == .vipb || resourceExtname == .nipb) && isWorkspaceTrusted"
+          "when": "(resourceExtname == .vipb || resourceExtname == .nipb || resourceFilename == .vipb || resourceFilename == .nipb) && isWorkspaceTrusted"
         }
       ],
       "commandPalette": [

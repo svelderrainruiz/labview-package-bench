@@ -22,6 +22,13 @@ describe('package build request', () => {
     expect(detectPackageType('/home/my.dir/spec')).toBe('unknown');
   });
 
+  it('detects bare dotfile specs where the file name is just .vipb / .nipb', () => {
+    expect(detectPackageType('/home/x/.vipb')).toBe('vi');
+    expect(detectPackageType('C:\\repo\\src\\.vipb')).toBe('vi');
+    expect(detectPackageType('.VIPB')).toBe('vi');
+    expect(detectPackageType('/home/x/.nipb')).toBe('ni');
+  });
+
   it('builds a request and describes each type', () => {
     expect(createPackageBuildRequest('a.vipb')).toEqual({ specPath: 'a.vipb', packageType: 'vi' });
     expect(describePackageType('vi')).toContain('VI Package');
