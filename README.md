@@ -120,6 +120,17 @@ for its VI Server port), then runs the build.
 > their images), so `--labview-bitness 32` needs a base image that already includes 32-bit LabVIEW.
 > Host 32-bit builds are verified.
 
+### Preparing a 32-bit-capable container image
+
+NI's LabVIEW Windows image includes only 64-bit LabVIEW. To build `--labview-bitness 32` in a
+container, start from a base image that already includes **32-bit LabVIEW** (e.g. one produced by
+NI's LabVIEW container-image pipeline), pass it via `--build-arg LABVIEW_IMAGE=...` when running
+`npm run image:build:windows`, and set `labviewPackageBench.docker.image` to the result. Installing
+32-bit LabVIEW at container-build time from the public Community x86 ISO places the files but leaves
+the install **reboot-pending**, so VIPM does not discover it (a reboot the container can't perform is
+required to finalize it) — which is why baking 32-bit LabVIEW into the base image is the supported
+route.
+
 ## Development
 
 ```bash
