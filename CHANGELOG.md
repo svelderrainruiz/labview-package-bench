@@ -16,5 +16,5 @@ All notable changes to this project are documented here.
 - Opt-in integration test harness (`npm run test:integration`) that builds a real `.vip` through the selected provider and asserts the artifact lands on disk.
 
 ### Changed
-- **`native-windows` provider verified end-to-end** on a Windows host with LabVIEW 2026 (64-bit) + VIPM. The README documents the required setup: `vipm` on `PATH` (or `vipm.cliPath` to the full path), LabVIEW VI Server *Exported VIs* / *Machine Access*, and running VS Code elevated so VIPM matches an elevated LabVIEW.
+- **`native-windows` provider verified end-to-end** on a Windows host with LabVIEW 2026 (64-bit and 32-bit) + VIPM. The README documents the required setup: `vipm` on `PATH` (or `vipm.cliPath` to the full path), LabVIEW VI Server *Exported VIs* / *Machine Access*, and running VS Code elevated so VIPM matches an elevated LabVIEW.
 

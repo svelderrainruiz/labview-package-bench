@@ -5,9 +5,9 @@ specs, orchestrated across isolated LabVIEW environments. It is deliberately dec
 VI-history review tooling so package-building concerns evolve on their own.
 
 > Status: Milestone 1. Right-click VI package builds via the JKI VIPM CLI are **verified end to
-> end** on a native Windows host (LabVIEW 2026 64-bit + VIPM) and in the baked NI LabVIEW Linux
-> container. The Docker Desktop **Windows** container path is wired and its image builds; in-container
-> builds are still being hardened.
+> end** on a native Windows host (LabVIEW 2026, 64-bit and 32-bit, + VIPM) and in the baked NI
+> LabVIEW Linux container. The Docker Desktop **Windows** container path is wired and its image
+> builds; in-container builds are still being hardened.
 
 ## What it does (Milestone 1)
 
@@ -15,7 +15,7 @@ VI-history review tooling so package-building concerns evolve on their own.
   files (and the Command Palette).
 - Builds a **VI package** from a `.vipb` spec by invoking the JKI VIPM CLI.
 - Lets you pick the **build environment** per build, or pin one:
-  - `native-windows` — runs the VIPM CLI directly on a Windows host. **Verified** on LabVIEW 2026 (64-bit) + VIPM.
+  - `native-windows` — runs the VIPM CLI directly on a Windows host. **Verified** on LabVIEW 2026 (64-bit and 32-bit) + VIPM.
   - `docker-linux` — runs the build inside the baked NI LabVIEW **Linux** container (works on Codespaces, Linux CI, and local Docker). Proven end-to-end.
   - `docker-windows` — runs the build inside a derived NI LabVIEW **Windows** container image (VIPM baked in).
 - Streams build output to a dedicated **LabVIEW Package Bench** output channel.
@@ -87,8 +87,8 @@ runs the VIPM CLI directly, with the spec's directory as the working directory:
 vipm build <Foo>.vipb --labview-version 2026 --labview-bitness 64 --show-progress --verbose
 ```
 
-Verified end-to-end on LabVIEW 2026 (64-bit) + VIPM 2026.3, producing a `.vip` at the location the
-spec defines. No `vipm refresh` is needed on a host whose LabVIEW is already registered.
+Verified end-to-end on LabVIEW 2026 (64-bit and 32-bit) + VIPM 2026.3, producing a `.vip` at the
+location the spec defines. No `vipm refresh` is needed on a host whose LabVIEW is already registered.
 
 ## Build a VI package with the Windows container
 
@@ -111,7 +111,9 @@ for its VI Server port), then runs the build.
 > container. The `vipm build` (`vipb_build`) step then makes no progress — reproduced even with a
 > source mass-compiled to the container's LabVIEW 2026, so it is **not** the version-mismatch
 > recompile but the in-container VIPM build step itself, which upstream VIPM still lists as
-> maturing for Windows containers. Use **`native-windows`** for a verified `.vip` today.
+> maturing for Windows containers. Use **`native-windows`** for a verified `.vip` today. Also note
+> NI's base image ships only **64-bit** LabVIEW, so `--labview-bitness 32` in the container needs
+> 32-bit LabVIEW installed into the image first (host 32-bit builds are verified).
 
 ## Development
 
