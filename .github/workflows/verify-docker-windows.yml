@@ -42,7 +42,12 @@ jobs:
           VIPM_SERIAL_NUMBER: ${{ secrets.VIPM_SERIAL_NUMBER }}
           VIPM_FULL_NAME: ${{ secrets.VIPM_FULL_NAME }}
           VIPM_EMAIL: ${{ secrets.VIPM_EMAIL }}
+        # Single-quote the -Command payload so the *outer* Actions pwsh passes it
+        # through literally. The container's powershell then expands $env:* (the
+        # secrets, forwarded by name) and $LASTEXITCODE. Double quotes made the
+        # outer shell expand them early, splitting the spaced VIPM_FULL_NAME into
+        # a stray argument and nulling $LASTEXITCODE.
         run: >
           docker run --rm -e VIPM_SERIAL_NUMBER -e VIPM_FULL_NAME -e VIPM_EMAIL
           --entrypoint powershell labview-package-bench-windows:latest
-          -NoProfile -Command "vipm activate --serial-number $env:VIPM_SERIAL_NUMBER --name $env:VIPM_FULL_NAME --email $env:VIPM_EMAIL; if ($LASTEXITCODE -ne 0) { exit 1 }; vipm refresh"
+          -NoProfile -Command 'vipm activate --serial-number $env:VIPM_SERIAL_NUMBER --name $env:VIPM_FULL_NAME --email $env:VIPM_EMAIL; if ($LASTEXITCODE -ne 0) { exit 1 }; vipm refresh'
