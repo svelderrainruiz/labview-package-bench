@@ -84,7 +84,8 @@ export function planBuildInvocation(
 export async function runBuildPackage(
   target: unknown,
   activeEditorPath: string | undefined,
-  deps: BuildPackageDeps
+  deps: BuildPackageDeps,
+  signal?: AbortSignal
 ): Promise<BuildOutcome> {
   const settings = deps.readSettings();
   const specPath = extractSpecPath(target, activeEditorPath);
@@ -131,8 +132,14 @@ export async function runBuildPackage(
   try {
     const exitCode = await deps.runner.run(plan.invocation, {
       cwd: plan.specDir,
-      onOutput: (chunk) => deps.log.append(chunk)
+      onOutput: (chunk) => deps.log.append(chunk),
+      signal
     });
+
+    if (signal?.aborted) {
+      deps.log.appendLine('\nBuild cancelled.');
+      return { status: 'cancelled' };
+    }
 
     if (exitCode === 0) {
       deps.log.appendLine('\nBuild succeeded.');

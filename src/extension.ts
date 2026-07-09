@@ -2,7 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 
-import { runBuildPackage, type BuildPackageDeps } from './commands/buildPackageCommand';
+import { runBuildPackage, extractSpecPath, type BuildPackageDeps } from './commands/buildPackageCommand';
+import { baseName } from './packaging/pathUtil';
 import { normalizePackageBenchSettings, type PackageBenchSettings } from './packaging/settings';
 import { nodeProcessRunner } from './packaging/processRunner';
 import { BUILD_OUTPUT_CHANNEL_NAME, createOutputChannelBuildLog } from './ui/buildOutputChannel';
@@ -84,7 +85,20 @@ export function activate(
         return undefined;
       }
       const activeEditorPath = vscode.window.activeTextEditor?.document.uri.fsPath;
-      return runBuildPackage(target, activeEditorPath, deps);
+      const specPath = extractSpecPath(target, activeEditorPath);
+      const title = specPath ? `Building ${baseName(specPath)}\u2026` : 'Building package\u2026';
+      return vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title,
+          cancellable: true
+        },
+        (_progress, token) => {
+          const controller = new AbortController();
+          token.onCancellationRequested(() => controller.abort());
+          return runBuildPackage(target, activeEditorPath, deps, controller.signal);
+        }
+      );
     })
   );
 }

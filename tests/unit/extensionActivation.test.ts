@@ -36,6 +36,7 @@ vi.mock('vscode', () => ({
   Uri: {
     file: (fsPath: string) => ({ fsPath, scheme: 'file' })
   },
+  ProgressLocation: { SourceControl: 1, Window: 10, Notification: 15 },
   window: {
     createOutputChannel: (name: string) => {
       const channel = {
@@ -56,6 +57,23 @@ vi.mock('vscode', () => ({
     showInformationMessage: showInformationMessageMock,
     showErrorMessage: showErrorMessageMock,
     showQuickPick: showQuickPickMock,
+    withProgress: (
+      _options: unknown,
+      task: (
+        progress: { report: (value: unknown) => void },
+        token: {
+          isCancellationRequested: boolean;
+          onCancellationRequested: () => { dispose: () => void };
+        }
+      ) => unknown
+    ) =>
+      task(
+        { report: () => undefined },
+        {
+          isCancellationRequested: false,
+          onCancellationRequested: () => ({ dispose: () => undefined })
+        }
+      ),
     get activeTextEditor() {
       return editorState.active;
     }
