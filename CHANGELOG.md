@@ -18,11 +18,13 @@ All notable changes to this project are documented here.
 - Opt-in integration test harness (`npm run test:integration`) that builds a real `.vip` (from a `.vipb`) or `.nipkg` (from a `.pbs` via `NipbCli`) through the selected provider and asserts the artifact lands on disk, with a provider-capability guard. The extension's `NipbCli` invocation is validated against the real CLI (it accepts `-o=<spec> -b=packages --save`).
 - CI also runs `npm run check` and `npm test` on `windows-latest` (the platform the native/container providers target), alongside the full gate suite on Linux.
 - Manual `Verify docker-windows` GitHub Actions workflow (`workflow_dispatch`) that builds the image on `windows-latest` and activates VIPM Pro + refreshes inside the container using `VIPM_SERIAL_NUMBER` / `VIPM_FULL_NAME` / `VIPM_EMAIL` repository secrets (replacing the local `.env` for CI; forwarded by name only).
+- Developer `.vscode/launch.json` (**Run Extension**) + `tasks.json` and an `npm run watch` script to dogfood the extension in the Extension Development Host (F5).
 
 ### Changed
 - **`native-windows` provider verified end-to-end** on a Windows host with LabVIEW 2026 (64-bit and 32-bit) + VIPM. The README documents the required setup: `vipm` on `PATH` (or `vipm.cliPath` to the full path), LabVIEW VI Server *Exported VIs* / *Machine Access*, and running VS Code elevated so VIPM matches an elevated LabVIEW.
 - The container providers now log a build advisory: in-container package **building** is an upstream VIPM preview and may not complete headlessly, so `native-windows` stays the verified build path. The containers remain proven for dependency install/refresh (`docker-linux`).
 
 ### Fixed
+- NI build settings are now honored: `labviewPackageBench.nipb.cliPath` and `nipb.buildArgs` are read from the workspace configuration (the extension previously ignored them and always used the defaults).
 - The **Build Package** menu and package detection now recognize a **bare dotfile spec** (a file named `.vipb` / `.nipb`, as some repositories name their build spec), not only the `Name.vipb` form.
 
