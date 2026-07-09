@@ -268,4 +268,17 @@ describe('runBuildPackage', () => {
     expect(outcome).toEqual({ status: 'failed', exitCode: 6 });
     expect(captured.errors[0]).toMatch(/public git repository/i);
   });
+
+  it('explains a package that already exists in the build output location', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      exitCode: 10,
+      output:
+        'error: command failed: Code:: 10\nSource:: (File "vi_technologies_lib_super_network_streams-2.0.0.23.vip" already exists in build output location.)\n'
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({ status: 'failed', exitCode: 10 });
+    expect(captured.errors[0]).toMatch(/already exists in the build output location/i);
+    expect(captured.errors[0]).toContain('vi_technologies_lib_super_network_streams-2.0.0.23.vip');
+  });
 });

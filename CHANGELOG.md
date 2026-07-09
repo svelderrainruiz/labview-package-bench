@@ -28,6 +28,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 - Native VIPM (VI) builds no longer abort spuriously on VIPM's short liveliness watchdog. A long, silent mass-compile could trip VIPM's 60 s default even though the `.vip` was still being produced; the extension now runs native `vipm build` with `VIPM_DESKTOP_LIVELINESS_TIMEOUT=600` (the same tolerance the container images bake in). Verified end-to-end against a real spec: the build that previously aborted at 60 s now completes and writes the `.vip`.
+- A rebuild whose package already exists now fails with a clear, actionable message instead of a cryptic `Code:: 10`. VIPM refuses to overwrite an existing `.vip` (and its CLI has no force/overwrite flag); the extension now recognizes the *"already exists in build output location"* failure, names the conflicting `.vip`, and advises deleting it or raising the version in the build spec.
 - NI build settings are now honored: `labviewPackageBench.nipb.cliPath` and `nipb.buildArgs` are read from the workspace configuration (the extension previously ignored them and always used the defaults).
 - The **Build Package** menu and package detection now recognize a **bare dotfile spec** (a file named `.vipb` / `.nipb`, as some repositories name their build spec), not only the `Name.vipb` form.
 

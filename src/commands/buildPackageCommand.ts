@@ -104,6 +104,11 @@ function describeBuildFailure(output: string): string | undefined {
   if (/public git repository|not inside a git repository|not a git repository/i.test(output)) {
     return 'The build spec must live inside a public git repository for VIPM Community Edition. Open the repository root as your workspace folder, or activate VIPM Professional.';
   }
+  if (/already exists in build output location/i.test(output)) {
+    const named = /"([^"]+\.vip)"\s+already exists in build output location/i.exec(output);
+    const which = named ? `The package "${named[1]}"` : 'The output package';
+    return `${which} already exists in the build output location and VIPM will not overwrite it. Delete the existing .vip, or raise the version in the build spec, then build again.`;
+  }
   return undefined;
 }
 
