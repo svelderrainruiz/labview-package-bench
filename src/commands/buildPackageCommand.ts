@@ -89,6 +89,10 @@ function describeLaunchFailure(command: string, message: string): string | undef
   return undefined;
 }
 
+/** Max characters of build output retained for failure-signature detection —
+ * enough to see the tail of a `--verbose` log without holding all of it. */
+const BUILD_OUTPUT_TAIL_LIMIT = 16 * 1024;
+
 /** A clearer hint for a recognizable failure signature in the tool output. */
 function describeBuildFailure(output: string): string | undefined {
   if (/public git repository|not inside a git repository|not a git repository/i.test(output)) {
@@ -145,12 +149,14 @@ export async function runBuildPackage(
   }
   deps.log.appendLine(`> ${renderInvocation(plan.invocation)}`);
 
-  let capturedOutput = '';
+  // Keep only a bounded tail of the output for failure-signature detection —
+  // avoids retaining a large --verbose log or re-copying a growing buffer.
+  let outputTail = '';
   try {
     const exitCode = await deps.runner.run(plan.invocation, {
       cwd: plan.specDir,
       onOutput: (chunk) => {
-        capturedOutput += chunk;
+        outputTail = (outputTail + chunk).slice(-BUILD_OUTPUT_TAIL_LIMIT);
         deps.log.append(chunk);
       },
       signal
@@ -168,7 +174,7 @@ export async function runBuildPackage(
     }
 
     deps.log.appendLine(`\nBuild failed (exit code ${exitCode}).`);
-    const failureHint = describeBuildFailure(capturedOutput);
+    const failureHint = describeBuildFailure(outputTail);
     deps.showError(
       failureHint
         ? `${kind} build failed (exit code ${exitCode}). ${failureHint}`

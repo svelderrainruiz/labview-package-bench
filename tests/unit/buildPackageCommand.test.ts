@@ -236,4 +236,15 @@ describe('runBuildPackage', () => {
     expect(outcome).toEqual({ status: 'failed', exitCode: 6 });
     expect(captured.errors[0]).toMatch(/public git repository/i);
   });
+
+  it('still detects the git-repo hint at the end of a large build log', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      exitCode: 6,
+      output: `${'noise '.repeat(20000)}\nerror: requires a public Git repository.\n`
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({ status: 'failed', exitCode: 6 });
+    expect(captured.errors[0]).toMatch(/public git repository/i);
+  });
 });
