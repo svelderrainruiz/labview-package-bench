@@ -36,6 +36,10 @@ export interface BuildPlan {
   provider: BuildProvider;
   invocation: CommandInvocation;
   specDir: string;
+  /** Extra environment for the build process (e.g. VIPM's liveliness timeout for
+   * native VI builds). Lives on the plan so every execution path — the command
+   * and the opt-in integration harness — applies the same env. */
+  env?: Record<string, string>;
 }
 
 export type BuildOutcome =
@@ -82,7 +86,14 @@ export function planBuildInvocation(
         );
   const specDir = parentDir(specPath);
   const invocation = provider.resolveInvocation({ specPath, specDir, mountRoot, base });
-  return { request, provider, invocation, specDir };
+  // VIPM's default 60s liveliness watchdog can abort a native build during a long
+  // silent mass-compile even after the .vip is written; grant native VIPM builds
+  // the same tolerance the container images bake in.
+  const env =
+    request.packageType === 'vi' && provider.id === 'native-windows'
+      ? { VIPM_DESKTOP_LIVELINESS_TIMEOUT: String(NATIVE_VIPM_LIVELINESS_SECONDS) }
+      : undefined;
+  return { request, provider, invocation, specDir, env };
 }
 
 /** A clearer message when a build tool cannot be launched (missing CLI/Docker). */
@@ -215,14 +226,6 @@ export async function runBuildPackage(
   }
   deps.log.appendLine(`> ${renderInvocation(plan.invocation)}`);
 
-  // VIPM's default 60s liveliness watchdog can abort a native build during a
-  // long silent mass-compile even after the .vip is written; grant native VIPM
-  // builds the same tolerance the container images bake in.
-  const buildEnv =
-    packageType === 'vi' && provider.id === 'native-windows'
-      ? { VIPM_DESKTOP_LIVELINESS_TIMEOUT: String(NATIVE_VIPM_LIVELINESS_SECONDS) }
-      : undefined;
-
   // Keep only a bounded tail of the output for failure-signature detection —
   // avoids retaining a large --verbose log or re-copying a growing buffer.
   let outputTail = '';
@@ -235,7 +238,7 @@ export async function runBuildPackage(
         deps.log.append(chunk);
       },
       signal,
-      env: buildEnv
+      env: plan.env
     });
   };
 

@@ -123,6 +123,15 @@ describe('planBuildInvocation', () => {
         '--verbose'
       ]
     });
+    // The liveliness env lives on the plan so the command and the integration
+    // harness apply it identically.
+    expect(plan.env).toEqual({ VIPM_DESKTOP_LIVELINESS_TIMEOUT: '600' });
+  });
+
+  it('sets no build env for an NI plan', () => {
+    const [native] = getBuildProviders(DEFAULT_SETTINGS);
+    const plan = planBuildInvocation('C:\\w\\Solution.pbs', 'C:\\w', native, DEFAULT_SETTINGS);
+    expect(plan.env).toBeUndefined();
   });
 });
 

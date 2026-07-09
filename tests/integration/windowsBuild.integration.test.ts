@@ -112,7 +112,8 @@ suite('package build (integration)', () => {
       cwd: plan.specDir,
       onOutput: (chunk) => {
         output += chunk;
-      }
+      },
+      env: plan.env
     });
 
     const produced = listArtifacts(mountRoot, artifactExt).filter((artifact) => {
