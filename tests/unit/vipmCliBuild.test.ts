@@ -41,7 +41,8 @@ describe('vipm cli build', () => {
             '${labviewVersion}',
             '--labview-bitness',
             '${labviewBitness}'
-          ]
+          ],
+          overwriteExisting: false
         }
       )
     ).toEqual({

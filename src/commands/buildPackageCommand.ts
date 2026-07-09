@@ -4,7 +4,7 @@ import {
   detectPackageType,
   type PackageBuildRequest
 } from '../packaging/packageBuildRequest';
-import { baseName, parentDir } from '../packaging/pathUtil';
+import { baseName, joinWindowsPath, parentDir } from '../packaging/pathUtil';
 import type { PackageBenchSettings } from '../packaging/settings';
 import type { BuildProvider } from '../packaging/buildProvider';
 import { buildNipbInvocation } from '../packaging/niPackageBuild';
@@ -25,6 +25,10 @@ export interface BuildPackageDeps {
   log: BuildLog;
   showInfo(message: string): void;
   showError(message: string): void;
+  /** Whether a filesystem path exists (injected so artifact cleanup is testable). */
+  pathExists(path: string): boolean;
+  /** Deletes a file, throwing on failure (injected so artifact cleanup is testable). */
+  deleteFile(path: string): void;
 }
 
 export interface BuildPlan {
@@ -99,17 +103,67 @@ const BUILD_OUTPUT_TAIL_LIMIT = 16 * 1024;
  * images. */
 const NATIVE_VIPM_LIVELINESS_SECONDS = 600;
 
+/** Matches VIPM's "already exists in build output location" (Code 10) failure,
+ * capturing the conflicting .vip file name. */
+const ALREADY_EXISTS_VIP = /"([^"]+\.vip)"\s+already exists in build output location/i;
+
 /** A clearer hint for a recognizable failure signature in the tool output. */
 function describeBuildFailure(output: string): string | undefined {
   if (/public git repository|not inside a git repository|not a git repository/i.test(output)) {
     return 'The build spec must live inside a public git repository for VIPM Community Edition. Open the repository root as your workspace folder, or activate VIPM Professional.';
   }
   if (/already exists in build output location/i.test(output)) {
-    const named = /"([^"]+\.vip)"\s+already exists in build output location/i.exec(output);
+    const named = ALREADY_EXISTS_VIP.exec(output);
     const which = named ? `The package "${named[1]}"` : 'The output package';
     return `${which} already exists in the build output location and VIPM will not overwrite it. Delete the existing .vip, or raise the version in the build spec, then build again.`;
   }
   return undefined;
+}
+
+/** Walks from the spec directory up to the mount root (inclusive), returning the
+ * first `<dir>\<fileName>` that exists. VIPM writes the .vip to the spec's
+ * directory or an ancestor, per the .vipb's output-location setting. */
+function findExistingArtifact(
+  fileName: string,
+  specDir: string,
+  mountRoot: string,
+  pathExists: (candidate: string) => boolean
+): string | undefined {
+  let current = specDir;
+  let previous = '';
+  for (let depth = 0; depth < 16 && current && current !== previous; depth += 1) {
+    const candidate = joinWindowsPath(current, fileName);
+    if (pathExists(candidate)) {
+      return candidate;
+    }
+    if (current === mountRoot) {
+      break;
+    }
+    previous = current;
+    current = parentDir(current);
+  }
+  return undefined;
+}
+
+/** For VIPM's "already exists" (Code 10) failure, finds the named .vip near the
+ * spec and deletes it, returning the removed path (or undefined when the output
+ * is a different failure or the file cannot be located). */
+function cleanExistingArtifact(
+  output: string,
+  specDir: string,
+  mountRoot: string,
+  deps: Pick<BuildPackageDeps, 'pathExists' | 'deleteFile'>
+): string | undefined {
+  const named = ALREADY_EXISTS_VIP.exec(output);
+  if (!named) {
+    return undefined;
+  }
+  const existing = findExistingArtifact(named[1], specDir, mountRoot, deps.pathExists);
+  if (!existing) {
+    return undefined;
+  }
+  deps.deleteFile(existing);
+  return existing;
 }
 
 export async function runBuildPackage(
@@ -148,7 +202,8 @@ export async function runBuildPackage(
     return { status: 'cancelled' };
   }
 
-  const plan = planBuildInvocation(specPath, deps.resolveMountRoot(specPath), provider, settings);
+  const mountRoot = deps.resolveMountRoot(specPath);
+  const plan = planBuildInvocation(specPath, mountRoot, provider, settings);
   const kind = packageType === 'ni' ? 'NI package' : 'VI package';
   deps.log.clear();
   deps.log.show();
@@ -171,8 +226,9 @@ export async function runBuildPackage(
   // Keep only a bounded tail of the output for failure-signature detection —
   // avoids retaining a large --verbose log or re-copying a growing buffer.
   let outputTail = '';
-  try {
-    const exitCode = await deps.runner.run(plan.invocation, {
+  const runBuild = () => {
+    outputTail = '';
+    return deps.runner.run(plan.invocation, {
       cwd: plan.specDir,
       onOutput: (chunk) => {
         outputTail = (outputTail + chunk).slice(-BUILD_OUTPUT_TAIL_LIMIT);
@@ -181,10 +237,40 @@ export async function runBuildPackage(
       signal,
       env: buildEnv
     });
+  };
+
+  try {
+    let exitCode = await runBuild();
 
     if (signal?.aborted) {
       deps.log.appendLine('\nBuild cancelled.');
       return { status: 'cancelled' };
+    }
+
+    // Opt-in recovery: VIPM refuses to overwrite an existing package (Code 10)
+    // and its CLI has no force flag. When enabled for native VI builds, remove
+    // the named .vip once and rebuild.
+    if (
+      exitCode !== 0 &&
+      settings.vipm.overwriteExisting &&
+      packageType === 'vi' &&
+      provider.id === 'native-windows'
+    ) {
+      try {
+        const removed = cleanExistingArtifact(outputTail, plan.specDir, mountRoot, deps);
+        if (removed) {
+          deps.log.appendLine(`\nRemoved existing package: ${removed}\nRebuilding…`);
+          exitCode = await runBuild();
+          if (signal?.aborted) {
+            deps.log.appendLine('\nBuild cancelled.');
+            return { status: 'cancelled' };
+          }
+        }
+      } catch (cleanupError) {
+        const message =
+          cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+        deps.log.appendLine(`\nCould not remove the existing package: ${message}`);
+      }
     }
 
     if (exitCode === 0) {

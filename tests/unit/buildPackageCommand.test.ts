@@ -19,9 +19,14 @@ import { getBuildProviders } from '../../src/providers/registry';
 interface HarnessOptions {
   settings?: PackageBenchSettings;
   exitCode?: number;
+  exitCodes?: number[];
   throwMessage?: string;
   output?: string;
+  outputs?: string[];
   pick?: (providers: BuildProvider[]) => BuildProvider | undefined;
+  mountRoot?: string;
+  existingArtifacts?: string[];
+  deleteThrows?: string;
 }
 
 function makeHarness(options: HarnessOptions = {}) {
@@ -32,19 +37,24 @@ function makeHarness(options: HarnessOptions = {}) {
     errors: [] as string[],
     runInvocations: [] as CommandInvocation[],
     runEnvs: [] as (Record<string, string> | undefined)[],
+    deleted: [] as string[],
     cleared: 0,
     shown: 0
   };
 
+  let runIndex = 0;
   const runner: ProcessRunner = {
     run: vi.fn(async (invocation: CommandInvocation, runOptions) => {
       captured.runInvocations.push(invocation);
       captured.runEnvs.push(runOptions.env);
-      runOptions.onOutput(options.output ?? 'build log line\n');
+      const output = options.outputs?.[runIndex] ?? options.output ?? 'build log line\n';
+      const exit = options.exitCodes?.[runIndex] ?? options.exitCode ?? 0;
+      runIndex += 1;
+      runOptions.onOutput(output);
       if (options.throwMessage) {
         throw new Error(options.throwMessage);
       }
-      return options.exitCode ?? 0;
+      return exit;
     })
   };
 
@@ -54,7 +64,8 @@ function makeHarness(options: HarnessOptions = {}) {
 
   const deps: BuildPackageDeps = {
     readSettings: () => settings,
-    resolveMountRoot: (specPath: string) => specPath.replace(/[\\/][^\\/]*$/, ''),
+    resolveMountRoot: (specPath: string) =>
+      options.mountRoot ?? specPath.replace(/[\\/][^\\/]*$/, ''),
     pickProvider,
     runner,
     log: {
@@ -68,7 +79,14 @@ function makeHarness(options: HarnessOptions = {}) {
       }
     },
     showInfo: (message) => captured.info.push(message),
-    showError: (message) => captured.errors.push(message)
+    showError: (message) => captured.errors.push(message),
+    pathExists: (path: string) => (options.existingArtifacts ?? []).includes(path),
+    deleteFile: (path: string) => {
+      captured.deleted.push(path);
+      if (options.deleteThrows) {
+        throw new Error(options.deleteThrows);
+      }
+    }
   };
 
   return { deps, captured, runner, pickProvider };
@@ -280,5 +298,79 @@ describe('runBuildPackage', () => {
     expect(outcome).toEqual({ status: 'failed', exitCode: 10 });
     expect(captured.errors[0]).toMatch(/already exists in the build output location/i);
     expect(captured.errors[0]).toContain('vi_technologies_lib_super_network_streams-2.0.0.23.vip');
+  });
+
+  it('overwrite-existing: deletes the conflicting .vip near the spec and rebuilds', async () => {
+    const settings = normalizePackageBenchSettings({
+      defaultProvider: 'native-windows',
+      vipm: { overwriteExisting: true }
+    });
+    const { deps, captured } = makeHarness({
+      settings,
+      mountRoot: 'C:\\w',
+      existingArtifacts: ['C:\\w\\pkg-1.0.0.0.vip'],
+      exitCodes: [10, 0],
+      outputs: [
+        'Source:: (File "pkg-1.0.0.0.vip" already exists in build output location.)\n',
+        'ok\n'
+      ]
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({ status: 'succeeded', exitCode: 0 });
+    expect(captured.deleted).toEqual(['C:\\w\\pkg-1.0.0.0.vip']);
+    expect(captured.runInvocations).toHaveLength(2);
+  });
+
+  it('overwrite-existing off (default): keeps the .vip and reports the failure', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      mountRoot: 'C:\\w',
+      existingArtifacts: ['C:\\w\\pkg-1.0.0.0.vip'],
+      exitCode: 10,
+      output: 'Source:: (File "pkg-1.0.0.0.vip" already exists in build output location.)\n'
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({ status: 'failed', exitCode: 10 });
+    expect(captured.deleted).toEqual([]);
+    expect(captured.runInvocations).toHaveLength(1);
+  });
+
+  it('overwrite-existing: no rebuild when the named .vip is not found near the spec', async () => {
+    const settings = normalizePackageBenchSettings({
+      defaultProvider: 'native-windows',
+      vipm: { overwriteExisting: true }
+    });
+    const { deps, captured } = makeHarness({
+      settings,
+      mountRoot: 'C:\\w',
+      existingArtifacts: [],
+      exitCode: 10,
+      output: 'Source:: (File "pkg-1.0.0.0.vip" already exists in build output location.)\n'
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({ status: 'failed', exitCode: 10 });
+    expect(captured.deleted).toEqual([]);
+    expect(captured.runInvocations).toHaveLength(1);
+  });
+
+  it('overwrite-existing: a delete failure is logged and the build still reports failed', async () => {
+    const settings = normalizePackageBenchSettings({
+      defaultProvider: 'native-windows',
+      vipm: { overwriteExisting: true }
+    });
+    const { deps, captured } = makeHarness({
+      settings,
+      mountRoot: 'C:\\w',
+      existingArtifacts: ['C:\\w\\pkg-1.0.0.0.vip'],
+      exitCode: 10,
+      output: 'Source:: (File "pkg-1.0.0.0.vip" already exists in build output location.)\n',
+      deleteThrows: 'EPERM: operation not permitted'
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({ status: 'failed', exitCode: 10 });
+    expect(captured.runInvocations).toHaveLength(1);
+    expect(
+      captured.lines.some((line) => line.includes('Could not remove the existing package'))
+    ).toBe(true);
   });
 });

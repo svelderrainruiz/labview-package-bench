@@ -21,7 +21,8 @@ function readSettings(): PackageBenchSettings {
     },
     vipm: {
       cliPath: config.get('vipm.cliPath'),
-      buildArgs: config.get('vipm.buildArgs')
+      buildArgs: config.get('vipm.buildArgs'),
+      overwriteExisting: config.get('vipm.overwriteExisting')
     },
     nipb: {
       cliPath: config.get('nipb.cliPath'),
@@ -74,6 +75,10 @@ export function activate(
     },
     showError: (message) => {
       void vscode.window.showErrorMessage(message);
+    },
+    pathExists: (candidate) => fs.existsSync(candidate),
+    deleteFile: (candidate) => {
+      fs.rmSync(candidate, { force: true });
     },
     ...depsOverrides
   };

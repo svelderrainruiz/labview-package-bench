@@ -6,6 +6,7 @@ All notable changes to this project are documented here.
 
 ### Added
 - Initial extension scaffold: **Build Package** command on `.vipb` / `.nipb` context menus.
+- `labviewPackageBench.vipm.overwriteExisting` setting (default off): when a native VI build fails because the package already exists in the build output location (VIPM has no overwrite flag), the extension deletes that `.vip` — located by walking from the build spec up to the repository root — and rebuilds once. Off by default because it removes a build artifact on disk.
 - VI package builds via the JKI VIPM CLI with `docker-linux`, `native-windows`, and `docker-windows` providers.
 - **NI package builds** from a `.pbs` NI Package Builder solution via the NI Package Builder CLI (`NipbCli`), on the `native-windows` provider (NI Package Builder is Windows-only and absent from the container images). Adds `labviewPackageBench.nipb.cliPath` / `nipb.buildArgs` settings, `.pbs` menu + detection (with `.nipb` kept as a legacy alias), and provider capability gating so only environments that can build a given package type are offered.
 - Marketplace packaging: a 128×128 extension icon, `keywords` + a gallery banner, a `.vscodeignore`, and an `npm run package` script (`vsce package`) that produces a lean `.vsix` (compiled `out/` + icon + docs only, ~25 KB).
@@ -28,7 +29,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 - Native VIPM (VI) builds no longer abort spuriously on VIPM's short liveliness watchdog. A long, silent mass-compile could trip VIPM's 60 s default even though the `.vip` was still being produced; the extension now runs native `vipm build` with `VIPM_DESKTOP_LIVELINESS_TIMEOUT=600` (the same tolerance the container images bake in). Verified end-to-end against a real spec: the build that previously aborted at 60 s now completes and writes the `.vip`.
-- A rebuild whose package already exists now fails with a clear, actionable message instead of a cryptic `Code:: 10`. VIPM refuses to overwrite an existing `.vip` (and its CLI has no force/overwrite flag); the extension now recognizes the *"already exists in build output location"* failure, names the conflicting `.vip`, and advises deleting it or raising the version in the build spec.
+- A rebuild whose package already exists now fails with a clear, actionable message instead of a cryptic `Code:: 10`. VIPM refuses to overwrite an existing `.vip` (and its CLI has no force/overwrite flag); the extension now recognizes the *"already exists in build output location"* failure, names the conflicting `.vip`, and advises deleting it or raising the version in the build spec. Opt into automatic handling with `labviewPackageBench.vipm.overwriteExisting`.
 - NI build settings are now honored: `labviewPackageBench.nipb.cliPath` and `nipb.buildArgs` are read from the workspace configuration (the extension previously ignored them and always used the defaults).
 - The **Build Package** menu and package detection now recognize a **bare dotfile spec** (a file named `.vipb` / `.nipb`, as some repositories name their build spec), not only the `Name.vipb` form.
 
