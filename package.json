@@ -1,0 +1,132 @@
+{
+  "name": "labview-package-bench",
+  "displayName": "LabVIEW Package Bench",
+  "description": "Build VI and NI packages from .vipb/.nipb build specs across isolated LabVIEW environments, orchestrated from VS Code.",
+  "version": "0.0.1",
+  "publisher": "svelderrainruiz",
+  "license": "0BSD",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/svelderrainruiz/labview-package-bench.git"
+  },
+  "homepage": "https://github.com/svelderrainruiz/labview-package-bench#readme",
+  "bugs": {
+    "url": "https://github.com/svelderrainruiz/labview-package-bench/issues"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Package Bench disables package build execution in untrusted workspaces to prevent external process execution. Build spec inspection remains available."
+    }
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "files": [
+    "out/**",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "labviewPackageBench.buildPackage",
+        "title": "Build Package",
+        "category": "LabVIEW Package Bench",
+        "icon": "$(package)"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "labviewPackageBench.buildPackage",
+          "group": "3_compare",
+          "when": "(resourceExtname == .vipb || resourceExtname == .nipb) && isWorkspaceTrusted"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "labviewPackageBench.buildPackage",
+          "group": "3_compare",
+          "when": "(resourceExtname == .vipb || resourceExtname == .nipb) && isWorkspaceTrusted"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "labviewPackageBench.buildPackage",
+          "when": "isWorkspaceTrusted"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "LabVIEW Package Bench",
+      "properties": {
+        "labviewPackageBench.defaultProvider": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "native-windows",
+            "docker-windows"
+          ],
+          "default": "ask",
+          "markdownDescription": "Build environment to use. `ask` prompts for a provider on each build."
+        },
+        "labviewPackageBench.vipm.cliPath": {
+          "type": "string",
+          "default": "vipm",
+          "markdownDescription": "Path to (or name of) the JKI VIPM command-line executable used to build VI packages."
+        },
+        "labviewPackageBench.vipm.buildArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "build",
+            "${specPath}"
+          ],
+          "markdownDescription": "Argument template passed to the VIPM CLI. `${specPath}` is replaced with the absolute path to the `.vipb` build spec."
+        },
+        "labviewPackageBench.docker.image": {
+          "type": "string",
+          "default": "labview-package-bench-windows:latest",
+          "markdownDescription": "Docker Desktop Windows container image (with LabVIEW + VIPM installed) used by the `docker-windows` provider."
+        },
+        "labviewPackageBench.docker.containerWorkdir": {
+          "type": "string",
+          "default": "C:\\\\work",
+          "markdownDescription": "Working directory inside the Windows container where the build spec directory is mounted."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "clean": "rimraf out coverage",
+    "compile": "tsc -p .",
+    "check": "tsc -p . --noEmit",
+    "customization:audit": "node scripts/auditCustomizationGovernance.js",
+    "fleet:generate": "node scripts/generateAgentFleet.js",
+    "fleet:check": "node scripts/generateAgentFleet.js --check",
+    "pretest": "npm run compile",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@types/vscode": "^1.90.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vscode/vsce": "3.9.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}
