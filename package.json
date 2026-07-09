@@ -131,6 +131,11 @@
           "type": "string",
           "default": "labview-package-bench-linux:latest",
           "markdownDescription": "NI LabVIEW Linux container image (with VIPM baked in, see `docker/Dockerfile`) used by the `docker-linux` provider."
+        },
+        "labviewPackageBench.linuxContainer.cacheVolume": {
+          "type": "string",
+          "default": "labview-package-bench-vipm-cache",
+          "markdownDescription": "Docker named volume mounted at the VIPM package cache to speed up repeat `vipm refresh`. Set to an empty string to disable caching."
         }
       }
     }

@@ -14,6 +14,7 @@ export interface DockerProviderSettings {
 
 export interface LinuxContainerSettings {
   image: string;
+  cacheVolume: string;
 }
 
 export interface PackageBenchSettings {
@@ -48,7 +49,8 @@ export const DEFAULT_SETTINGS: PackageBenchSettings = {
     containerWorkdir: 'C:\\work'
   },
   linuxContainer: {
-    image: 'labview-package-bench-linux:latest'
+    image: 'labview-package-bench-linux:latest',
+    cacheVolume: 'labview-package-bench-vipm-cache'
   }
 };
 
@@ -57,11 +59,15 @@ interface RawSettings {
   labview?: { version?: unknown; bitness?: unknown };
   vipm?: { cliPath?: unknown; buildArgs?: unknown };
   docker?: { image?: unknown; containerWorkdir?: unknown };
-  linuxContainer?: { image?: unknown };
+  linuxContainer?: { image?: unknown; cacheVolume?: unknown };
 }
 
 function asString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim().length > 0 ? value : fallback;
+}
+
+function asOptionalString(value: unknown, fallback: string): string {
+  return typeof value === 'string' ? value : fallback;
 }
 
 function asStringArray(value: unknown, fallback: string[]): string[] {
@@ -96,7 +102,11 @@ export function normalizePackageBenchSettings(raw: RawSettings = {}): PackageBen
       )
     },
     linuxContainer: {
-      image: asString(raw.linuxContainer?.image, DEFAULT_SETTINGS.linuxContainer.image)
+      image: asString(raw.linuxContainer?.image, DEFAULT_SETTINGS.linuxContainer.image),
+      cacheVolume: asOptionalString(
+        raw.linuxContainer?.cacheVolume,
+        DEFAULT_SETTINGS.linuxContainer.cacheVolume
+      )
     }
   };
 }

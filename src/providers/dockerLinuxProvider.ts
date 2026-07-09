@@ -8,6 +8,10 @@ const CONTAINER_WORKDIR = '/work';
 // packages) before the requested vipm command. See docker/vipm-build.sh.
 const VIPM_BUILD_WRAPPER = 'lvpb-vipm-build';
 
+// VIPM package-index cache directory inside the container. Persisting it across
+// builds (via a named volume) makes repeat `vipm refresh` runs fast.
+const VIPM_CACHE_DIR = '/usr/local/jki/vipm/cache';
+
 /**
  * Runs the build inside the baked NI LabVIEW Linux container image (see
  * `docker/Dockerfile`). The image's entrypoint brings up the headless display
@@ -33,20 +37,13 @@ export function createDockerLinuxProvider(settings: LinuxContainerSettings): Bui
         arg === context.specPath ? containerSpecPath : arg
       );
 
-      return {
-        command: 'docker',
-        args: [
-          'run',
-          '--rm',
-          '-v',
-          `${context.mountRoot}:${CONTAINER_WORKDIR}`,
-          '-w',
-          CONTAINER_WORKDIR,
-          settings.image,
-          VIPM_BUILD_WRAPPER,
-          ...rewrittenArgs
-        ]
-      };
+      const args = ['run', '--rm', '-v', `${context.mountRoot}:${CONTAINER_WORKDIR}`];
+      if (settings.cacheVolume) {
+        args.push('-v', `${settings.cacheVolume}:${VIPM_CACHE_DIR}`);
+      }
+      args.push('-w', CONTAINER_WORKDIR, settings.image, VIPM_BUILD_WRAPPER, ...rewrittenArgs);
+
+      return { command: 'docker', args };
     }
   };
 }

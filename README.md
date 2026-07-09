@@ -42,6 +42,7 @@ The extension's command construction is unit-tested on Linux; execution needs th
 | `labviewPackageBench.vipm.cliPath` | `vipm` | Path to the VIPM CLI executable (native providers). |
 | `labviewPackageBench.vipm.buildArgs` | `["build", "${specPath}", "--labview-version", "${labviewVersion}", "--labview-bitness", "${labviewBitness}", "--show-progress", "--verbose"]` | VIPM CLI argument template; `${specPath}`, `${labviewVersion}`, `${labviewBitness}` are substituted. |
 | `labviewPackageBench.linuxContainer.image` | `labview-package-bench-linux:latest` | NI LabVIEW Linux image (VIPM baked in) used by `docker-linux`. |
+| `labviewPackageBench.linuxContainer.cacheVolume` | `labview-package-bench-vipm-cache` | Docker volume for the VIPM package cache (faster repeat `refresh`); empty to disable. |
 | `labviewPackageBench.docker.image` | `labview-package-bench-windows:latest` | Windows container image used by `docker-windows`. |
 | `labviewPackageBench.docker.containerWorkdir` | `C:\work` | In-container mount/working directory (Windows). |
 

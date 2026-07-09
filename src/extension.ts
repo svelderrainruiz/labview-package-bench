@@ -27,7 +27,8 @@ function readSettings(): PackageBenchSettings {
       containerWorkdir: config.get('docker.containerWorkdir')
     },
     linuxContainer: {
-      image: config.get('linuxContainer.image')
+      image: config.get('linuxContainer.image'),
+      cacheVolume: config.get('linuxContainer.cacheVolume')
     }
   });
 }

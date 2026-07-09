@@ -79,6 +79,8 @@ describe('build providers', () => {
       '--rm',
       '-v',
       '/home/u/repo:/work',
+      '-v',
+      'labview-package-bench-vipm-cache:/usr/local/jki/vipm/cache',
       '-w',
       '/work',
       'labview-package-bench-linux:latest',
@@ -92,6 +94,23 @@ describe('build providers', () => {
       '--show-progress',
       '--verbose'
     ]);
+  });
+
+  it('omits the cache volume when disabled', () => {
+    const noCache = normalizePackageBenchSettings({ linuxContainer: { cacheVolume: '' } });
+    const dockerLinux = getBuildProviders(noCache)[2];
+    const base = baseFor('/home/u/repo/src/a.vipb');
+    const invocation = dockerLinux.resolveInvocation({
+      specPath: '/home/u/repo/src/a.vipb',
+      specDir: '/home/u/repo/src',
+      mountRoot: '/home/u/repo',
+      base
+    });
+
+    expect(invocation.args).not.toContain(
+      'labview-package-bench-vipm-cache:/usr/local/jki/vipm/cache'
+    );
+    expect(invocation.args.filter((arg) => arg === '-v')).toHaveLength(1);
   });
 
   it('resolves a configured provider and defers when set to ask', () => {
