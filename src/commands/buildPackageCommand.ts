@@ -123,6 +123,9 @@ export async function runBuildPackage(
   deps.log.appendLine(
     `Building ${baseName(specPath)} — ${describePackageType(packageType)} via ${provider.label}`
   );
+  if (provider.buildNote) {
+    deps.log.appendLine(`Note: ${provider.buildNote}`);
+  }
   deps.log.appendLine(`> ${renderInvocation(plan.invocation)}`);
 
   try {

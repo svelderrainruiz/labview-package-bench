@@ -169,6 +169,20 @@ describe('runBuildPackage', () => {
     expect(captured.runInvocations[0].command).toBe('docker');
   });
 
+  it('advises when a container provider is used for a build', async () => {
+    const { deps, captured } = makeHarness({ pick: (providers) => providers[1], exitCode: 0 });
+    await runBuildPackage({ fsPath: 'C:\\w\\a.vipb' }, undefined, deps);
+    expect(
+      captured.lines.some((line) => line.startsWith('Note:') && line.includes('preview'))
+    ).toBe(true);
+  });
+
+  it('adds no build note for the verified native provider', async () => {
+    const { deps, captured } = makeHarness({ settings: nativeSettings, exitCode: 0 });
+    await runBuildPackage({ fsPath: 'C:\\w\\a.vipb' }, undefined, deps);
+    expect(captured.lines.some((line) => line.startsWith('Note:'))).toBe(false);
+  });
+
   it('reports a failing exit code', async () => {
     const { deps, captured } = makeHarness({ settings: nativeSettings, exitCode: 2 });
     expect(await runBuildPackage({ fsPath: 'C:\\w\\a.vipb' }, undefined, deps)).toEqual({

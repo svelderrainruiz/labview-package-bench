@@ -20,6 +20,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 - **`native-windows` provider verified end-to-end** on a Windows host with LabVIEW 2026 (64-bit and 32-bit) + VIPM. The README documents the required setup: `vipm` on `PATH` (or `vipm.cliPath` to the full path), LabVIEW VI Server *Exported VIs* / *Machine Access*, and running VS Code elevated so VIPM matches an elevated LabVIEW.
+- The container providers now log a build advisory: in-container package **building** is an upstream VIPM preview and may not complete headlessly, so `native-windows` stays the verified build path. The containers remain proven for dependency install/refresh (`docker-linux`).
 
 ### Fixed
 - The **Build Package** menu and package detection now recognize a **bare dotfile spec** (a file named `.vipb` / `.nipb`, as some repositories name their build spec), not only the `Name.vipb` form.
