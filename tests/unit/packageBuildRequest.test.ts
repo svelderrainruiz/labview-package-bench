@@ -12,7 +12,9 @@ describe('package build request', () => {
     expect(detectPackageType('/home/x/thing.VIPB')).toBe('vi');
   });
 
-  it('detects NI packages from .nipb', () => {
+  it('detects NI packages from .pbs solutions and the legacy .nipb alias', () => {
+    expect(detectPackageType('C:\\proj\\Solution.pbs')).toBe('ni');
+    expect(detectPackageType('/home/x/thing.PBS')).toBe('ni');
     expect(detectPackageType('/home/x/thing.nipb')).toBe('ni');
   });
 
@@ -22,10 +24,11 @@ describe('package build request', () => {
     expect(detectPackageType('/home/my.dir/spec')).toBe('unknown');
   });
 
-  it('detects bare dotfile specs where the file name is just .vipb / .nipb', () => {
+  it('detects bare dotfile specs where the file name is just .vipb / .pbs / .nipb', () => {
     expect(detectPackageType('/home/x/.vipb')).toBe('vi');
     expect(detectPackageType('C:\\repo\\src\\.vipb')).toBe('vi');
     expect(detectPackageType('.VIPB')).toBe('vi');
+    expect(detectPackageType('/home/x/.pbs')).toBe('ni');
     expect(detectPackageType('/home/x/.nipb')).toBe('ni');
   });
 

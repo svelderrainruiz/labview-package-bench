@@ -4,7 +4,9 @@ import { baseName } from './pathUtil';
  * The kind of package a build spec produces.
  *
  * - `vi`  — a JKI VI Package built from a `.vipb` spec via the VIPM CLI.
- * - `ni`  — an NI package built from a `.nipb` spec (planned for a later milestone).
+ * - `ni`  — an NI package built from a `.pbs` NI Package Builder solution via
+ *   the NI Package Builder CLI (`NipbCli`). `.nipb` is accepted as a legacy
+ *   alias for the earlier, pre-CLI naming.
  * - `unknown` — an unsupported file.
  */
 export type PackageType = 'vi' | 'ni' | 'unknown';
@@ -16,6 +18,7 @@ export interface PackageBuildRequest {
 
 const EXTENSION_TYPE_MAP: Record<string, PackageType> = {
   '.vipb': 'vi',
+  '.pbs': 'ni',
   '.nipb': 'ni'
 };
 

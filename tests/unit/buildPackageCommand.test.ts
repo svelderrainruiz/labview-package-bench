@@ -117,15 +117,32 @@ describe('runBuildPackage', () => {
     expect(await runBuildPackage({ fsPath: '/x/y.vi' }, undefined, deps)).toEqual({
       status: 'unsupported'
     });
-    expect(captured.errors[0]).toContain('not a .vipb or .nipb');
+    expect(captured.errors[0]).toContain('not a .vipb, .pbs, or .nipb');
   });
 
-  it('defers NI package builds', async () => {
-    const { deps, captured } = makeHarness();
-    expect(await runBuildPackage({ fsPath: '/x/y.nipb' }, undefined, deps)).toEqual({
-      status: 'deferred'
+  it('builds an NI package with NipbCli on the native provider', async () => {
+    const { deps, captured } = makeHarness({ settings: nativeSettings, exitCode: 0 });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\Solution.pbs' }, undefined, deps);
+    expect(outcome).toEqual({ status: 'succeeded', exitCode: 0 });
+    const invocation = captured.runInvocations[0];
+    expect(invocation.command).toContain('NipbCli');
+    expect(invocation.args).toEqual(['-o=C:\\w\\Solution.pbs', '-b=packages', '--save']);
+    expect(captured.info.some((message) => message.includes('NI package build succeeded'))).toBe(
+      true
+    );
+  });
+
+  it('offers only the native provider for NI packages (docker lacks NI Package Builder)', async () => {
+    let offered: BuildProvider[] = [];
+    const { deps } = makeHarness({
+      exitCode: 0,
+      pick: (providers) => {
+        offered = providers;
+        return providers[0];
+      }
     });
-    expect(captured.info[0]).toContain('NI package');
+    await runBuildPackage({ fsPath: 'C:\\w\\Solution.pbs' }, undefined, deps);
+    expect(offered.map((provider) => provider.id)).toEqual(['native-windows']);
   });
 
   it('cancels when the provider picker is dismissed', async () => {

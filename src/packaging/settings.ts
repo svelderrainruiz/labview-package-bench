@@ -1,3 +1,4 @@
+import type { NipbBuildSettings } from './niPackageBuild';
 import type { VipmBuildSettings } from './vipmCliBuild';
 
 export type DefaultProvider = 'ask' | 'native-windows' | 'docker-windows' | 'docker-linux';
@@ -22,6 +23,7 @@ export interface PackageBenchSettings {
   defaultProvider: DefaultProvider;
   labview: LabviewSettings;
   vipm: VipmBuildSettings;
+  nipb: NipbBuildSettings;
   docker: DockerProviderSettings;
   linuxContainer: LinuxContainerSettings;
 }
@@ -45,6 +47,10 @@ export const DEFAULT_SETTINGS: PackageBenchSettings = {
       '--verbose'
     ]
   },
+  nipb: {
+    cliPath: 'C:\\Program Files\\National Instruments\\Package Builder\\NipbCli.exe',
+    buildArgs: ['-o=${specPath}', '-b=packages', '--save']
+  },
   docker: {
     image: 'labview-package-bench-windows:latest',
     containerWorkdir: 'C:\\work',
@@ -60,6 +66,7 @@ interface RawSettings {
   defaultProvider?: unknown;
   labview?: { version?: unknown; bitness?: unknown };
   vipm?: { cliPath?: unknown; buildArgs?: unknown };
+  nipb?: { cliPath?: unknown; buildArgs?: unknown };
   docker?: { image?: unknown; containerWorkdir?: unknown; dns?: unknown };
   linuxContainer?: { image?: unknown; cacheVolume?: unknown };
 }
@@ -95,6 +102,10 @@ export function normalizePackageBenchSettings(raw: RawSettings = {}): PackageBen
     vipm: {
       cliPath: asString(raw.vipm?.cliPath, DEFAULT_SETTINGS.vipm.cliPath),
       buildArgs: asStringArray(raw.vipm?.buildArgs, DEFAULT_SETTINGS.vipm.buildArgs)
+    },
+    nipb: {
+      cliPath: asString(raw.nipb?.cliPath, DEFAULT_SETTINGS.nipb.cliPath),
+      buildArgs: asStringArray(raw.nipb?.buildArgs, DEFAULT_SETTINGS.nipb.buildArgs)
     },
     docker: {
       image: asString(raw.docker?.image, DEFAULT_SETTINGS.docker.image),
