@@ -112,8 +112,11 @@ for its VI Server port), then runs the build.
 > source mass-compiled to the container's LabVIEW 2026, so it is **not** the version-mismatch
 > recompile but the in-container VIPM build step itself, which upstream VIPM still lists as
 > maturing for Windows containers. Use **`native-windows`** for a verified `.vip` today. Also note
-> NI's base image ships only **64-bit** LabVIEW, so `--labview-bitness 32` in the container needs
-> 32-bit LabVIEW installed into the image first (host 32-bit builds are verified).
+> NI's base image ships only **64-bit** LabVIEW. 32-bit LabVIEW can be added from NI's public
+> Community x86 ISO via NIPM, but a fresh container install is reboot-pending and is not discovered
+> by VIPM until LabVIEW is launched once to create its `.ini`, and it needs a VI Server port
+> distinct from the 64-bit LabVIEW's (3363) — so `--labview-bitness 32` in the container is still
+> being hardened. Host 32-bit builds are verified.
 
 ## Development
 

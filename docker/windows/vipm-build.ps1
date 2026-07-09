@@ -48,11 +48,23 @@ $lvDir = if ($bitness -eq '32') {
 $lvExe = Join-Path $lvDir 'LabVIEW.exe'
 $lvIni = Join-Path $lvDir 'LabVIEW.ini'
 
-# VI Server TCP port LabVIEW listens on (VIPM connects here); read from the ini.
-$port = 3363
+# VI Server TCP port LabVIEW listens on (VIPM connects here). Use a bitness-
+# distinct default so a 32-bit LabVIEW does not collide with a 64-bit LabVIEW on
+# 3363, read the real port from the ini when present, and seed a minimal VI
+# Server config when the target LabVIEW has no ini yet (e.g. a freshly-installed
+# LabVIEW that has never launched).
+$port = if ($bitness -eq '32') { 3364 } else { 3363 }
 if (Test-Path $lvIni) {
     $match = Select-String -Path $lvIni -Pattern '^server\.tcp\.port=(\d+)' | Select-Object -First 1
     if ($match) { $port = [int]$match.Matches[0].Groups[1].Value }
+} elseif (Test-Path $lvExe) {
+    Set-Content -Path $lvIni -Encoding ASCII -Value @"
+[LabVIEW]
+server.tcp.enabled=True
+server.tcp.port=$port
+server.tcp.access="+localhost"
+server.vi.access="+*"
+"@
 }
 
 if ($env:VIPM_SERIAL_NUMBER) {
