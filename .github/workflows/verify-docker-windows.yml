@@ -1,0 +1,48 @@
+name: Verify docker-windows (manual)
+
+# Heavy, opt-in verification of the docker-windows image on a real Windows
+# runner: it derives the VIPM-enabled LabVIEW Windows image and validates VIPM
+# Pro activation + refresh inside the container using repository secrets. It is
+# manual (workflow_dispatch) because it pulls NI's multi-GB LabVIEW image and
+# requires a VIPM Pro serial.
+#
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   VIPM_SERIAL_NUMBER, VIPM_FULL_NAME, VIPM_EMAIL
+# These replace the local docker/windows/.env for CI. They are forwarded into
+# the container by name only, so the serial never appears on a command line.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-docker-windows:
+    name: Build image + activate VIPM Pro in container
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Fetch VIPM installer
+        run: node scripts/fetchVipmInstaller.js
+      - name: Build docker-windows image
+        run: >
+          docker build -t labview-package-bench-windows:latest
+          --build-arg LABVIEW_IMAGE=nationalinstruments/labview:latest-windows
+          docker/windows
+      - name: Verify VIPM CLI is installed
+        run: >
+          docker run --rm --entrypoint powershell labview-package-bench-windows:latest
+          -NoProfile -Command "vipm --version"
+      - name: Activate VIPM Pro and refresh in the container
+        env:
+          VIPM_SERIAL_NUMBER: ${{ secrets.VIPM_SERIAL_NUMBER }}
+          VIPM_FULL_NAME: ${{ secrets.VIPM_FULL_NAME }}
+          VIPM_EMAIL: ${{ secrets.VIPM_EMAIL }}
+        run: >
+          docker run --rm -e VIPM_SERIAL_NUMBER -e VIPM_FULL_NAME -e VIPM_EMAIL
+          --entrypoint powershell labview-package-bench-windows:latest
+          -NoProfile -Command "vipm activate --serial-number $env:VIPM_SERIAL_NUMBER --name $env:VIPM_FULL_NAME --email $env:VIPM_EMAIL; if ($LASTEXITCODE -ne 0) { exit 1 }; vipm refresh"

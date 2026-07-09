@@ -15,6 +15,7 @@ All notable changes to this project are documented here.
 - `labviewPackageBench.docker.dns` setting to supply an explicit DNS server for the Windows container (works around a Docker NAT DNS failure that otherwise breaks VIPM Pro online activation).
 - Opt-in integration test harness (`npm run test:integration`) that builds a real `.vip` through the selected provider and asserts the artifact lands on disk.
 - CI also runs `npm run check` and `npm test` on `windows-latest` (the platform the native/container providers target), alongside the full gate suite on Linux.
+- Manual `Verify docker-windows` GitHub Actions workflow (`workflow_dispatch`) that builds the image on `windows-latest` and activates VIPM Pro + refreshes inside the container using `VIPM_SERIAL_NUMBER` / `VIPM_FULL_NAME` / `VIPM_EMAIL` repository secrets (replacing the local `.env` for CI; forwarded by name only).
 
 ### Changed
 - **`native-windows` provider verified end-to-end** on a Windows host with LabVIEW 2026 (64-bit and 32-bit) + VIPM. The README documents the required setup: `vipm` on `PATH` (or `vipm.cliPath` to the full path), LabVIEW VI Server *Exported VIs* / *Machine Access*, and running VS Code elevated so VIPM matches an elevated LabVIEW.
