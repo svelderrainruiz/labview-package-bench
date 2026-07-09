@@ -8,6 +8,7 @@ All notable changes to this project are documented here.
 - Initial extension scaffold: **Build Package** command on `.vipb` / `.nipb` context menus.
 - VI package builds via the JKI VIPM CLI with `docker-linux`, `native-windows`, and `docker-windows` providers.
 - **NI package builds** from a `.pbs` NI Package Builder solution via the NI Package Builder CLI (`NipbCli`), on the `native-windows` provider (NI Package Builder is Windows-only and absent from the container images). Adds `labviewPackageBench.nipb.cliPath` / `nipb.buildArgs` settings, `.pbs` menu + detection (with `.nipb` kept as a legacy alias), and provider capability gating so only environments that can build a given package type are offered.
+- Marketplace packaging: extension `keywords` + a gallery banner, a `.vscodeignore`, and an `npm run package` script (`vsce package`) that produces a lean `.vsix` (compiled `out/` + docs only, ~23 KB). An extension icon is the remaining packaging TODO.
 - `docker-linux` provider plus a baked NI LabVIEW Linux image (`docker/Dockerfile`, `npm run image:build:linux`) that installs VIPM, brings up a headless display + LabVIEW, and runs `vipm refresh`/`vipm build`. Verified end-to-end in Codespaces.
 - LabVIEW version/bitness settings and the real `vipm build --labview-version/--labview-bitness` argument template.
 - Provider picker and a dedicated build output channel.

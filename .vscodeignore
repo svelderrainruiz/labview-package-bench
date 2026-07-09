@@ -1,0 +1,28 @@
+# Only the compiled extension and its docs ship in the .vsix.
+
+# Sources, tests, and build metadata (compiled output in out/ ships instead)
+src/**
+tests/**
+out/**/*.map
+out/**/*.tsbuildinfo
+tsconfig.json
+vitest.config.ts
+vitest.integration.config.ts
+
+# Container assets and repo tooling (not needed at runtime)
+docker/**
+scripts/**
+.github/**
+.claude/**
+.vscode/**
+coverage/**
+
+# Repo meta and dotfiles
+.gitignore
+.gitattributes
+.editorconfig
+AGENTS.md
+CONTRIBUTING.md
+package-lock.json
+*.vsix
+**/.DS_Store

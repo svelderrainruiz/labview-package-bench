@@ -1,7 +1,7 @@
 {
   "name": "labview-package-bench",
   "displayName": "LabVIEW Package Bench",
-  "description": "Build VI and NI packages from .vipb/.nipb build specs across isolated LabVIEW environments, orchestrated from VS Code.",
+  "description": "Build VI and NI packages from .vipb and .pbs build specs across isolated LabVIEW environments, orchestrated from VS Code.",
   "version": "0.0.1",
   "publisher": "svelderrainruiz",
   "license": "0BSD",
@@ -26,13 +26,22 @@
   "categories": [
     "Other"
   ],
-  "main": "./out/extension.js",
-  "files": [
-    "out/**",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE"
+  "keywords": [
+    "labview",
+    "vipm",
+    "vi package",
+    "vipb",
+    "ni package",
+    "nipkg",
+    "package builder",
+    "national instruments",
+    "jki"
   ],
+  "galleryBanner": {
+    "color": "#0E3A5F",
+    "theme": "dark"
+  },
+  "main": "./out/extension.js",
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -164,6 +173,8 @@
   },
   "scripts": {
     "clean": "rimraf out coverage",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package",
     "compile": "tsc -p .",
     "check": "tsc -p . --noEmit",
     "customization:audit": "node scripts/auditCustomizationGovernance.js",
