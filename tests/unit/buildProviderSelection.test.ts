@@ -46,12 +46,17 @@ describe('build providers', () => {
     expect(invocation.args).toEqual([
       'run',
       '--rm',
+      '-e',
+      'VIPM_SERIAL_NUMBER',
+      '-e',
+      'VIPM_FULL_NAME',
+      '-e',
+      'VIPM_EMAIL',
       '-v',
       'C:\\repo:C:\\work',
       '-w',
       'C:\\work',
       'labview-package-bench-windows:latest',
-      'vipm',
       'build',
       'C:\\work\\src\\a.vipb',
       '--labview-version',
@@ -61,6 +66,53 @@ describe('build providers', () => {
       '--show-progress',
       '--verbose'
     ]);
+  });
+
+  it('forwards VIPM Pro activation env by name only, never by value', () => {
+    const docker = getBuildProviders(settings)[1];
+    const base = baseFor('C:\\repo\\src\\a.vipb');
+    const invocation = docker.resolveInvocation({
+      specPath: 'C:\\repo\\src\\a.vipb',
+      specDir: 'C:\\repo\\src',
+      mountRoot: 'C:\\repo',
+      base
+    });
+
+    // Only the env variable *names* are passed so `docker run` forwards them
+    // from the host — a serial value must never be embedded in the invocation.
+    expect(invocation.args).toContain('VIPM_SERIAL_NUMBER');
+    const serialIndex = invocation.args.indexOf('VIPM_SERIAL_NUMBER');
+    expect(invocation.args[serialIndex - 1]).toBe('-e');
+    // The token after the image is the vipm sub-command (the baked entrypoint
+    // prepends `vipm`), not an explicit command or secret.
+    expect(invocation.args).not.toContain('vipm');
+  });
+
+  it('adds an explicit DNS server to the Windows docker run when configured', () => {
+    const withDns = normalizePackageBenchSettings({ docker: { dns: '8.8.8.8' } });
+    const docker = getBuildProviders(withDns)[1];
+    const base = baseFor('C:\\repo\\src\\a.vipb');
+    const invocation = docker.resolveInvocation({
+      specPath: 'C:\\repo\\src\\a.vipb',
+      specDir: 'C:\\repo\\src',
+      mountRoot: 'C:\\repo',
+      base
+    });
+
+    expect(invocation.args.slice(0, 4)).toEqual(['run', '--rm', '--dns', '8.8.8.8']);
+  });
+
+  it('omits --dns when no DNS is configured', () => {
+    const docker = getBuildProviders(settings)[1];
+    const base = baseFor('C:\\repo\\src\\a.vipb');
+    const invocation = docker.resolveInvocation({
+      specPath: 'C:\\repo\\src\\a.vipb',
+      specDir: 'C:\\repo\\src',
+      mountRoot: 'C:\\repo',
+      base
+    });
+
+    expect(invocation.args).not.toContain('--dns');
   });
 
   it('mounts the repo root in a Linux docker run against the NI image', () => {

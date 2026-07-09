@@ -6,3 +6,9 @@ coverage/
 .vscode-test/
 .DS_Store
 .claude/agent-memory-local/
+
+# Pre-fetched VIPM Windows installer for the docker-windows image (large binary).
+docker/windows/vipm-setup.exe
+
+# Local VIPM Pro activation credentials for the docker-windows container.
+docker/windows/.env

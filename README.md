@@ -4,8 +4,10 @@ A VS Code extension for building **VI packages** and **NI packages** from `.vipb
 specs, orchestrated across isolated LabVIEW environments. It is deliberately decoupled from
 VI-history review tooling so package-building concerns evolve on their own.
 
-> Status: early scaffold. Milestone 1 targets right-click VI package builds via the JKI VIPM CLI on
-> a native Windows host or a Docker Desktop Windows container.
+> Status: Milestone 1. Right-click VI package builds via the JKI VIPM CLI are **verified end to
+> end** on a native Windows host (LabVIEW 2026, 64-bit and 32-bit, + VIPM) and in the baked NI
+> LabVIEW Linux container. The Docker Desktop **Windows** container path is wired and its image
+> builds; in-container builds are still being hardened.
 
 ## What it does (Milestone 1)
 
@@ -13,9 +15,9 @@ VI-history review tooling so package-building concerns evolve on their own.
   files (and the Command Palette).
 - Builds a **VI package** from a `.vipb` spec by invoking the JKI VIPM CLI.
 - Lets you pick the **build environment** per build, or pin one:
+  - `native-windows` — runs the VIPM CLI directly on a Windows host. **Verified** on LabVIEW 2026 (64-bit and 32-bit) + VIPM.
   - `docker-linux` — runs the build inside the baked NI LabVIEW **Linux** container (works on Codespaces, Linux CI, and local Docker). Proven end-to-end.
-  - `native-windows` — runs the VIPM CLI directly on a Windows host.
-  - `docker-windows` — runs the build inside a Docker Desktop Windows container image.
+  - `docker-windows` — runs the build inside a derived NI LabVIEW **Windows** container image (VIPM baked in).
 - Streams build output to a dedicated **LabVIEW Package Bench** output channel.
 
 NI package builds (`.nipb`) are recognized and reserved for a later milestone.
@@ -24,11 +26,22 @@ NI package builds (`.nipb`) are recognized and reserved for a later milestone.
 
 Choose a build environment:
 
+- **`native-windows` (verified):** a Windows host with LabVIEW (e.g. 2026) and the JKI **VIPM CLI**
+  installed. One-time setup:
+  - Ensure `vipm` is on `PATH`, or set `labviewPackageBench.vipm.cliPath` to the full path — the
+    default install location is `C:\Program Files\JKI\VI Package Manager\support\vipm.exe`.
+  - Enable LabVIEW's VI Server so VIPM can drive the build: **Tools » Options » VI Server** → add
+    `*` to **Exported VIs** (Allow Access) and `localhost` to **Machine Access** (Allow Access).
+  - The `.vipb` must live inside a git repository (VIPM checks the repo before building).
+  - Run VS Code **elevated (Run as administrator)** so VIPM runs at the same privilege as LabVIEW
+    and can persist that VI Server configuration under `C:\Program Files`. Without matching
+    elevation, VIPM fails with a VI Server "Exported VIs / Machine Access" error.
 - **`docker-linux` (recommended, proven):** Docker plus the baked NI LabVIEW Linux image
   (`npm run image:build:linux`). Works on Codespaces, Linux CI, and local Docker. VIPM Community
   Edition requires the `.vipb` to live inside a **public git repository**.
-- **`native-windows`:** a Windows host with LabVIEW and the JKI **VIPM CLI** installed.
-- **`docker-windows`:** Docker Desktop in Windows-containers mode with a LabVIEW + VIPM image.
+- **`docker-windows`:** Docker Desktop in Windows-containers mode plus the derived LabVIEW + VIPM
+  Windows image (`npm run image:build:windows`). Requires a VIPM Pro serial for in-container
+  activation.
 
 The extension's command construction is unit-tested on Linux; execution needs the chosen runtime.
 
@@ -39,15 +52,17 @@ The extension's command construction is unit-tested on Linux; execution needs th
 | `labviewPackageBench.defaultProvider` | `ask` | `ask`, `docker-linux`, `native-windows`, or `docker-windows`. |
 | `labviewPackageBench.labview.version` | `2026` | LabVIEW version year (`--labview-version`). |
 | `labviewPackageBench.labview.bitness` | `64` | LabVIEW bitness (`--labview-bitness`). |
-| `labviewPackageBench.vipm.cliPath` | `vipm` | Path to the VIPM CLI executable (native providers). |
+| `labviewPackageBench.vipm.cliPath` | `vipm` | Path to the VIPM CLI executable (native providers). On Windows, `vipm` resolves on `PATH`; otherwise set the full path (default install: `C:\Program Files\JKI\VI Package Manager\support\vipm.exe`). |
 | `labviewPackageBench.vipm.buildArgs` | `["build", "${specPath}", "--labview-version", "${labviewVersion}", "--labview-bitness", "${labviewBitness}", "--show-progress", "--verbose"]` | VIPM CLI argument template; `${specPath}`, `${labviewVersion}`, `${labviewBitness}` are substituted. |
 | `labviewPackageBench.linuxContainer.image` | `labview-package-bench-linux:latest` | NI LabVIEW Linux image (VIPM baked in) used by `docker-linux`. |
 | `labviewPackageBench.linuxContainer.cacheVolume` | `labview-package-bench-vipm-cache` | Docker volume for the VIPM package cache (faster repeat `refresh`); empty to disable. |
 | `labviewPackageBench.docker.image` | `labview-package-bench-windows:latest` | Windows container image used by `docker-windows`. |
 | `labviewPackageBench.docker.containerWorkdir` | `C:\work` | In-container mount/working directory (Windows). |
+| `labviewPackageBench.docker.dns` | `` | Optional DNS server for the `docker-windows` container (e.g. `8.8.8.8`). Set it when the Docker NAT DNS cannot resolve, which otherwise breaks VIPM Pro online activation in the container. |
 
-> The exact VIPM CLI verb/flags are deployment-specific — adjust `vipm.buildArgs` to match your
-> installed VIPM CLI.
+> The default `vipm.buildArgs` match the JKI VIPM CLI 2026.3 (`vipm build <spec> --labview-version
+> <year> --labview-bitness <32\|64> --show-progress --verbose`). Adjust them if your installed VIPM
+> CLI differs.
 
 ## Build a VI package with the Linux container
 
@@ -61,6 +76,61 @@ headless display and LabVIEW, runs `vipm refresh` to register LabVIEW, and build
 repository root. This path is verified end-to-end (it builds the reference
 [VIT-Super-Network-Streams](https://github.com/svelderrainruiz/VIT-Super-Network-Streams) `.vipb`).
 
+## Build a VI package on a native Windows host
+
+With LabVIEW + VIPM installed and the one-time setup from **Requirements** above, set
+`labviewPackageBench.defaultProvider` to `native-windows`, then right-click a **named** `.vipb`
+(e.g. `Foo.vipb`, not a bare `.vipb`) inside a git repo and choose **Build Package**. The provider
+runs the VIPM CLI directly, with the spec's directory as the working directory:
+
+```powershell
+vipm build <Foo>.vipb --labview-version 2026 --labview-bitness 64 --show-progress --verbose
+```
+
+Verified end-to-end on LabVIEW 2026 (64-bit and 32-bit) + VIPM 2026.3, producing a `.vip` at the
+location the spec defines. No `vipm refresh` is needed on a host whose LabVIEW is already registered.
+
+## Build a VI package with the Windows container
+
+```powershell
+npm run image:build:windows   # derive the LabVIEW + VIPM Windows image (one time)
+```
+
+This downloads the VIPM installer and builds `labview-package-bench-windows:latest` from NI's
+official LabVIEW **Windows** image (see [`docker/windows/`](docker/windows/Dockerfile)). VIPM Pro
+activation is required inside the container: copy [`docker/windows/.env.example`](docker/windows/.env.example)
+to `docker/windows/.env` and fill in your serial, or set `VIPM_SERIAL_NUMBER` / `VIPM_FULL_NAME` /
+`VIPM_EMAIL` in the environment VS Code runs in — the provider forwards them **by name only**, so the
+serial never appears on a command line. If the Docker NAT DNS cannot resolve (which breaks
+activation), set `labviewPackageBench.docker.dns` (e.g. `8.8.8.8`). The container's baked wrapper
+activates VIPM Pro, runs `vipm refresh`, warms LabVIEW headless (`LabVIEW.exe --headless`, waiting
+for its VI Server port), then runs the build.
+
+> **Status:** the image build, VIPM Pro activation, `vipm refresh`, and the headless LabVIEW
+> launch + VI Server connection are all verified, and VIPM **starts** the build inside the
+> container. The `vipm build` (`vipb_build`) step then makes no progress — reproduced even with a
+> source mass-compiled to the container's LabVIEW 2026, so it is **not** the version-mismatch
+> recompile but the in-container VIPM build step itself, which upstream VIPM still lists as
+> maturing for Windows containers. Use **`native-windows`** for a verified `.vip` today. Also note
+> NI's base image ships only **64-bit** LabVIEW. 32-bit LabVIEW can be installed from NI's public
+> Community x86 ISO, and the build wrapper seeds a VI Server `.ini` on a port distinct from the
+> 64-bit LabVIEW's (3363) so the freshly-installed 32-bit LabVIEW comes up headless — but the
+> container install stays **reboot-pending** and VIPM does not discover it (`2026 (32-bit) not
+> found`). Finalizing needs a reboot the container can't perform (which is why NI bakes LabVIEW into
+> their images), so `--labview-bitness 32` needs a base image that already includes 32-bit LabVIEW.
+> Host 32-bit builds are verified.
+
+### Preparing a 32-bit-capable container image
+
+NI's LabVIEW Windows image includes only 64-bit LabVIEW. To build `--labview-bitness 32` in a
+container, start from a base image that already includes **32-bit LabVIEW** (e.g. one produced by
+NI's LabVIEW container-image pipeline), pass it via `--build-arg LABVIEW_IMAGE=...` when running
+`npm run image:build:windows`, and set `labviewPackageBench.docker.image` to the result. Installing
+32-bit LabVIEW at container-build time from the public Community x86 ISO places the files but leaves
+the install **reboot-pending**, so VIPM does not discover it (a reboot the container can't perform is
+required to finalize it) — which is why baking 32-bit LabVIEW into the base image is the supported
+route.
+
 ## Development
 
 ```bash
@@ -69,6 +139,18 @@ npm run check   # type-check
 npm test        # unit tests + coverage
 npm run compile # emit ./out
 ```
+
+The unit suite is deterministic and separator-agnostic (it never spawns a real build). To verify a
+provider end-to-end against real LabVIEW + VIPM, run the opt-in integration harness:
+
+```powershell
+$env:LVPB_INTEGRATION = '1'
+$env:LVPB_SPEC = 'C:\path\to\Foo.vipb'   # a named .vipb in a git repo
+$env:LVPB_PROVIDER = 'native-windows'    # or docker-windows
+npm run test:integration
+```
+
+It builds through the real provider invocation + process runner and asserts a `.vip` is produced.
 
 Governance tooling (agent fleet, audits):
 

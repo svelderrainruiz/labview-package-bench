@@ -28,3 +28,18 @@ jobs:
         run: npm run fleet:check
       - name: Customization governance audit
         run: npm run customization:audit
+
+  windows-build-and-test:
+    name: Build and test (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Type-check
+        run: npm run check
+      - name: Unit tests
+        run: npm test

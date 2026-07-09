@@ -24,7 +24,8 @@ function readSettings(): PackageBenchSettings {
     },
     docker: {
       image: config.get('docker.image'),
-      containerWorkdir: config.get('docker.containerWorkdir')
+      containerWorkdir: config.get('docker.containerWorkdir'),
+      dns: config.get('docker.dns')
     },
     linuxContainer: {
       image: config.get('linuxContainer.image'),
