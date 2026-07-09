@@ -25,6 +25,9 @@ npm test
   hosts.
 - Exercise build-command construction through the exported pure helpers and the injected process
   runner rather than spawning real processes.
+- End-to-end provider verification lives in the **opt-in** integration harness
+  (`npm run test:integration`, gated behind `LVPB_INTEGRATION=1`); it requires LabVIEW + VIPM (and
+  Docker for the container providers) and is never part of the default `npm test`.
 
 ## Agent governance
 

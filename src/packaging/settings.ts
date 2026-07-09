@@ -10,6 +10,7 @@ export interface LabviewSettings {
 export interface DockerProviderSettings {
   image: string;
   containerWorkdir: string;
+  dns: string;
 }
 
 export interface LinuxContainerSettings {
@@ -46,7 +47,8 @@ export const DEFAULT_SETTINGS: PackageBenchSettings = {
   },
   docker: {
     image: 'labview-package-bench-windows:latest',
-    containerWorkdir: 'C:\\work'
+    containerWorkdir: 'C:\\work',
+    dns: ''
   },
   linuxContainer: {
     image: 'labview-package-bench-linux:latest',
@@ -58,7 +60,7 @@ interface RawSettings {
   defaultProvider?: unknown;
   labview?: { version?: unknown; bitness?: unknown };
   vipm?: { cliPath?: unknown; buildArgs?: unknown };
-  docker?: { image?: unknown; containerWorkdir?: unknown };
+  docker?: { image?: unknown; containerWorkdir?: unknown; dns?: unknown };
   linuxContainer?: { image?: unknown; cacheVolume?: unknown };
 }
 
@@ -99,7 +101,8 @@ export function normalizePackageBenchSettings(raw: RawSettings = {}): PackageBen
       containerWorkdir: asString(
         raw.docker?.containerWorkdir,
         DEFAULT_SETTINGS.docker.containerWorkdir
-      )
+      ),
+      dns: asOptionalString(raw.docker?.dns, DEFAULT_SETTINGS.docker.dns)
     },
     linuxContainer: {
       image: asString(raw.linuxContainer?.image, DEFAULT_SETTINGS.linuxContainer.image),

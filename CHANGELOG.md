@@ -11,3 +11,10 @@ All notable changes to this project are documented here.
 - LabVIEW version/bitness settings and the real `vipm build --labview-version/--labview-bitness` argument template.
 - Provider picker and a dedicated build output channel.
 - Dual-runtime agent fleet (Copilot + Claude Code) with governance audits and a branch-guard hook.
+- `docker-windows` image assets (`docker/windows/Dockerfile`, `docker/windows/vipm-build.ps1`, `scripts/fetchVipmInstaller.js`, `npm run image:build:windows`) that derive a VIPM-enabled LabVIEW **Windows** container. The baked wrapper activates VIPM Pro, runs `vipm refresh`, warms LabVIEW headless, then runs the build, and forwards `VIPM_SERIAL_NUMBER`/`VIPM_FULL_NAME`/`VIPM_EMAIL` by name only. Activation, refresh, and the headless LabVIEW launch are verified in-container; completing the in-container packaging step is still being hardened.
+- `labviewPackageBench.docker.dns` setting to supply an explicit DNS server for the Windows container (works around a Docker NAT DNS failure that otherwise breaks VIPM Pro online activation).
+- Opt-in integration test harness (`npm run test:integration`) that builds a real `.vip` through the selected provider and asserts the artifact lands on disk.
+
+### Changed
+- **`native-windows` provider verified end-to-end** on a Windows host with LabVIEW 2026 (64-bit) + VIPM. The README documents the required setup: `vipm` on `PATH` (or `vipm.cliPath` to the full path), LabVIEW VI Server *Exported VIs* / *Machine Access*, and running VS Code elevated so VIPM matches an elevated LabVIEW.
+

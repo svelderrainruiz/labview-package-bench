@@ -127,6 +127,11 @@
           "default": "C:\\\\work",
           "markdownDescription": "Working directory inside the Windows container where the build spec directory is mounted."
         },
+        "labviewPackageBench.docker.dns": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional DNS server for the `docker-windows` container (e.g. `8.8.8.8`). Set this when the Docker NAT DNS cannot resolve, which otherwise breaks VIPM Pro online activation inside the container. Empty uses Docker's default DNS."
+        },
         "labviewPackageBench.linuxContainer.image": {
           "type": "string",
           "default": "labview-package-bench-linux:latest",
@@ -150,7 +155,9 @@
     "pretest": "npm run compile",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "image:build:linux": "docker build -t labview-package-bench-linux:latest docker"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "image:build:linux": "docker build -t labview-package-bench-linux:latest docker",
+    "image:build:windows": "node scripts/fetchVipmInstaller.js && docker build -t labview-package-bench-windows:latest docker/windows"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
