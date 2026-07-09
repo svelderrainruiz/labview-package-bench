@@ -200,4 +200,18 @@ describe('runBuildPackage', () => {
     });
     expect(captured.errors[0]).toContain('boom');
   });
+
+  it('reports cancelled when the build signal is aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const { deps, captured } = makeHarness({ settings: nativeSettings, exitCode: 0 });
+    const outcome = await runBuildPackage(
+      { fsPath: 'C:\\w\\a.vipb' },
+      undefined,
+      deps,
+      controller.signal
+    );
+    expect(outcome).toEqual({ status: 'cancelled' });
+    expect(captured.lines.some((line) => line.includes('cancelled'))).toBe(true);
+  });
 });
