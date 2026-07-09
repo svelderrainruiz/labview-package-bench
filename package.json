@@ -127,6 +127,11 @@
           ],
           "markdownDescription": "Argument template passed to the VIPM CLI. Tokens `${specPath}`, `${labviewVersion}`, and `${labviewBitness}` are substituted at build time."
         },
+        "labviewPackageBench.vipm.overwriteExisting": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "When a native VI build fails because the package already exists in the build output location (VIPM has no overwrite flag), delete that `.vip` and rebuild once. Off by default because it deletes a build artifact on disk."
+        },
         "labviewPackageBench.nipb.cliPath": {
           "type": "string",
           "default": "C:\\Program Files\\National Instruments\\Package Builder\\NipbCli.exe",

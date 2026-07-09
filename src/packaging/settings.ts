@@ -45,7 +45,8 @@ export const DEFAULT_SETTINGS: PackageBenchSettings = {
       '${labviewBitness}',
       '--show-progress',
       '--verbose'
-    ]
+    ],
+    overwriteExisting: false
   },
   nipb: {
     cliPath: 'C:\\Program Files\\National Instruments\\Package Builder\\NipbCli.exe',
@@ -65,7 +66,7 @@ export const DEFAULT_SETTINGS: PackageBenchSettings = {
 interface RawSettings {
   defaultProvider?: unknown;
   labview?: { version?: unknown; bitness?: unknown };
-  vipm?: { cliPath?: unknown; buildArgs?: unknown };
+  vipm?: { cliPath?: unknown; buildArgs?: unknown; overwriteExisting?: unknown };
   nipb?: { cliPath?: unknown; buildArgs?: unknown };
   docker?: { image?: unknown; containerWorkdir?: unknown; dns?: unknown };
   linuxContainer?: { image?: unknown; cacheVolume?: unknown };
@@ -86,6 +87,10 @@ function asStringArray(value: unknown, fallback: string[]): string[] {
   return fallback;
 }
 
+function asBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 function asDefaultProvider(value: unknown): DefaultProvider {
   return value === 'native-windows' || value === 'docker-windows' || value === 'docker-linux'
     ? value
@@ -101,7 +106,11 @@ export function normalizePackageBenchSettings(raw: RawSettings = {}): PackageBen
     },
     vipm: {
       cliPath: asString(raw.vipm?.cliPath, DEFAULT_SETTINGS.vipm.cliPath),
-      buildArgs: asStringArray(raw.vipm?.buildArgs, DEFAULT_SETTINGS.vipm.buildArgs)
+      buildArgs: asStringArray(raw.vipm?.buildArgs, DEFAULT_SETTINGS.vipm.buildArgs),
+      overwriteExisting: asBoolean(
+        raw.vipm?.overwriteExisting,
+        DEFAULT_SETTINGS.vipm.overwriteExisting
+      )
     },
     nipb: {
       cliPath: asString(raw.nipb?.cliPath, DEFAULT_SETTINGS.nipb.cliPath),

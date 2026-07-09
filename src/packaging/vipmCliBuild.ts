@@ -14,6 +14,9 @@ export interface CommandInvocation {
 export interface VipmBuildSettings {
   cliPath: string;
   buildArgs: string[];
+  /** When true, a native VI build that fails because the package already exists
+   * in the output location removes that .vip once and retries the build. */
+  overwriteExisting: boolean;
 }
 
 export interface VipmBuildTokens {
