@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { nodeProcessRunner } from '../../src/packaging/processRunner';
+import {
+  dockerRunContainerName,
+  nodeProcessRunner,
+  withDockerContainerName
+} from '../../src/packaging/processRunner';
 
 // Exercises the real spawn boundary with short-lived Node subprocesses (the one
 // place the extension shells out), including the cancellation path.
@@ -48,5 +52,37 @@ describe('nodeProcessRunner', () => {
     );
     expect(code).toBe(0);
     expect(output).toBe('');
+  });
+});
+
+// Cancelling a Docker build must stop the container, not just the docker client
+// process (which does not stop the daemon-owned container on Windows).
+describe('docker cancellation naming', () => {
+  it('generates a container name for a docker run', () => {
+    const name = dockerRunContainerName({ command: 'docker', args: ['run', '--rm', 'img', 'cmd'] });
+    expect(name).toMatch(/^lvpb-build-/);
+  });
+
+  it('reuses an explicit --name', () => {
+    expect(
+      dockerRunContainerName({ command: 'docker', args: ['run', '--name', 'mine', '--rm', 'img'] })
+    ).toBe('mine');
+  });
+
+  it('returns undefined for non-docker or non-run invocations', () => {
+    expect(dockerRunContainerName({ command: 'vipm', args: ['build', 'x'] })).toBeUndefined();
+    expect(dockerRunContainerName({ command: 'docker', args: ['ps'] })).toBeUndefined();
+  });
+
+  it('inserts --name after run, leaving an already-named invocation untouched', () => {
+    expect(withDockerContainerName(['run', '--rm', 'img'], 'c1')).toEqual([
+      'run',
+      '--name',
+      'c1',
+      '--rm',
+      'img'
+    ]);
+    const named = ['run', '--name', 'x', 'img'];
+    expect(withDockerContainerName(named, 'c1')).toBe(named);
   });
 });
