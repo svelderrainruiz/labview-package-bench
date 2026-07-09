@@ -93,11 +93,13 @@ suite('package build (integration)', () => {
     const mountRoot = findGitRoot(path.dirname(specPath)) ?? path.dirname(specPath);
     const plan = planBuildInvocation(specPath, mountRoot, provider!, settings);
 
-    // Remove any prior build output so the run is repeatable (the builders
-    // refuse to overwrite an existing artifact).
-    for (const artifact of listArtifacts(mountRoot, artifactExt)) {
-      fs.rmSync(artifact, { force: true });
-    }
+    // Do NOT delete pre-existing artifacts: a repo may hold checked-in packages
+    // or local-feed inputs (a `.nipkg` can be a build input, not just an output),
+    // and this opt-in harness must never remove them. Instead, snapshot what
+    // exists and assert a *freshly* produced artifact — new by path, or rebuilt
+    // (newer mtime) — after the run.
+    const before = new Set(listArtifacts(mountRoot, artifactExt));
+    const startedAt = Date.now();
 
     let output = '';
     const exitCode = await nodeProcessRunner.run(plan.invocation, {
@@ -107,11 +109,12 @@ suite('package build (integration)', () => {
       }
     });
 
+    const produced = listArtifacts(mountRoot, artifactExt).filter(
+      (artifact) => !before.has(artifact) || fs.statSync(artifact).mtimeMs >= startedAt
+    );
+
     expect(output.length).toBeGreaterThan(0);
     expect(exitCode, `build failed:\n${output}`).toBe(0);
-    expect(
-      listArtifacts(mountRoot, artifactExt).length,
-      `no ${artifactExt} was produced`
-    ).toBeGreaterThan(0);
+    expect(produced.length, `no freshly built ${artifactExt} was produced`).toBeGreaterThan(0);
   });
 });
