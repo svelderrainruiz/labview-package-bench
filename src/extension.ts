@@ -50,7 +50,10 @@ function resolveMountRoot(specPath: string): string {
   return folder?.uri.fsPath ?? path.dirname(specPath);
 }
 
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(
+  context: vscode.ExtensionContext,
+  depsOverrides: Partial<BuildPackageDeps> = {}
+): void {
   const channel = vscode.window.createOutputChannel(BUILD_OUTPUT_CHANNEL_NAME);
   context.subscriptions.push(channel);
 
@@ -65,7 +68,8 @@ export function activate(context: vscode.ExtensionContext): void {
     },
     showError: (message) => {
       void vscode.window.showErrorMessage(message);
-    }
+    },
+    ...depsOverrides
   };
 
   context.subscriptions.push(
