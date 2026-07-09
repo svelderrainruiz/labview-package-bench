@@ -1,0 +1,51 @@
+name: Verify docker-linux (manual)
+
+# Opt-in verification of the docker-linux image on a native Linux runner. It
+# builds the VIPM-enabled NI LabVIEW Linux image (docker/Dockerfile) and
+# exercises the container capabilities that are mature today -- activate,
+# refresh, and package install -- using repository secrets.
+#
+# In-container VI-package *build* on Linux is still upstream-preview (JKI:
+# "Building a VI Package ... is not fully functional (due to some errors) on
+# Linux"), so this intentionally verifies provisioning, not build. It is the
+# scaffold we flip to a real `vipm build` assertion once upstream ships it.
+#
+# Linux containers run natively on ubuntu runners, so (unlike verify-docker-
+# windows) no OS-version pinning or Docker-mode switch is needed.
+#
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   VIPM_SERIAL_NUMBER, VIPM_FULL_NAME, VIPM_EMAIL
+# They are forwarded into the container by name only, so the serial never
+# appears on a command line. Reuses the same secrets as verify-docker-windows.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-docker-linux:
+    name: Build image + install a package in the Linux container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build docker-linux image
+        run: docker build -t labview-package-bench-linux:latest docker
+      - name: Verify VIPM CLI is installed
+        run: docker run --rm --entrypoint vipm labview-package-bench-linux:latest --version
+      - name: Activate, refresh, and install a package in the container
+        env:
+          VIPM_SERIAL_NUMBER: ${{ secrets.VIPM_SERIAL_NUMBER }}
+          VIPM_FULL_NAME: ${{ secrets.VIPM_FULL_NAME }}
+          VIPM_EMAIL: ${{ secrets.VIPM_EMAIL }}
+        # Single-quote the container script so the outer runner bash passes it
+        # through literally; the container's bash then expands $VIPM_* (secrets
+        # forwarded by name) and the double quotes keep the spaced full name a
+        # single argument. The image entrypoint brings up the headless display +
+        # LabVIEW before exec'ing this script. A successful `install` + a `list`
+        # that shows the package is the pass/fail assertion.
+        run: >
+          docker run --rm -e VIPM_SERIAL_NUMBER -e VIPM_FULL_NAME -e VIPM_EMAIL -e VIPM_NONINTERACTIVE=1
+          labview-package-bench-linux:latest
+          bash -c 'vipm activate --serial-number "$VIPM_SERIAL_NUMBER" --name "$VIPM_FULL_NAME" --email "$VIPM_EMAIL" && vipm refresh && vipm install -y oglib_boolean && vipm list --installed | grep -qi oglib_boolean'
