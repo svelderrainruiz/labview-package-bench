@@ -9,6 +9,12 @@ VI-history review tooling so package-building concerns evolve on their own.
 > LabVIEW Linux container. The Docker Desktop **Windows** container path is wired and its image
 > builds; in-container builds are still being hardened.
 
+## Install
+
+- **From a `.vsix`:** run `npm run package` to build `labview-package-bench-<version>.vsix`, then in
+  VS Code run **Extensions: Install from VSIX…** (or `code --install-extension <file>.vsix`).
+- A build environment is required to actually build packages — see **Requirements** below.
+
 ## What it does (Milestone 1)
 
 - Adds a **Build Package** command to the editor and Explorer context menus for `.vipb`, `.pbs`,
