@@ -8,6 +8,8 @@ export interface ProcessRunOptions {
   /** Aborts the run: the child process is killed and the promise resolves. The
    * caller inspects its own signal to distinguish cancellation from failure. */
   signal?: AbortSignal;
+  /** Extra environment variables merged over the inherited process env. */
+  env?: Record<string, string>;
 }
 
 /**
@@ -61,7 +63,8 @@ export const nodeProcessRunner: ProcessRunner = {
 
       const child = spawn(invocation.command, args, {
         cwd: options.cwd,
-        shell: false
+        shell: false,
+        env: options.env ? { ...process.env, ...options.env } : undefined
       });
 
       const onAbort = () => {

@@ -93,6 +93,12 @@ function describeLaunchFailure(command: string, message: string): string | undef
  * enough to see the tail of a `--verbose` log without holding all of it. */
 const BUILD_OUTPUT_TAIL_LIMIT = 16 * 1024;
 
+/** Seconds VIPM may run silently before its watchdog aborts. VIPM's own default
+ * (60s) is too short for a long native mass-compile and can abort a build even
+ * after the .vip is written; this matches the value baked into the container
+ * images. */
+const NATIVE_VIPM_LIVELINESS_SECONDS = 600;
+
 /** A clearer hint for a recognizable failure signature in the tool output. */
 function describeBuildFailure(output: string): string | undefined {
   if (/public git repository|not inside a git repository|not a git repository/i.test(output)) {
@@ -149,6 +155,14 @@ export async function runBuildPackage(
   }
   deps.log.appendLine(`> ${renderInvocation(plan.invocation)}`);
 
+  // VIPM's default 60s liveliness watchdog can abort a native build during a
+  // long silent mass-compile even after the .vip is written; grant native VIPM
+  // builds the same tolerance the container images bake in.
+  const buildEnv =
+    packageType === 'vi' && provider.id === 'native-windows'
+      ? { VIPM_DESKTOP_LIVELINESS_TIMEOUT: String(NATIVE_VIPM_LIVELINESS_SECONDS) }
+      : undefined;
+
   // Keep only a bounded tail of the output for failure-signature detection —
   // avoids retaining a large --verbose log or re-copying a growing buffer.
   let outputTail = '';
@@ -159,7 +173,8 @@ export async function runBuildPackage(
         outputTail = (outputTail + chunk).slice(-BUILD_OUTPUT_TAIL_LIMIT);
         deps.log.append(chunk);
       },
-      signal
+      signal,
+      env: buildEnv
     });
 
     if (signal?.aborted) {

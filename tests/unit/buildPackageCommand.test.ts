@@ -31,6 +31,7 @@ function makeHarness(options: HarnessOptions = {}) {
     info: [] as string[],
     errors: [] as string[],
     runInvocations: [] as CommandInvocation[],
+    runEnvs: [] as (Record<string, string> | undefined)[],
     cleared: 0,
     shown: 0
   };
@@ -38,6 +39,7 @@ function makeHarness(options: HarnessOptions = {}) {
   const runner: ProcessRunner = {
     run: vi.fn(async (invocation: CommandInvocation, runOptions) => {
       captured.runInvocations.push(invocation);
+      captured.runEnvs.push(runOptions.env);
       runOptions.onOutput(options.output ?? 'build log line\n');
       if (options.throwMessage) {
         throw new Error(options.throwMessage);
@@ -162,6 +164,25 @@ describe('runBuildPackage', () => {
     expect(captured.cleared).toBe(1);
     expect(captured.shown).toBe(1);
     expect(captured.info.some((message) => message.includes('succeeded'))).toBe(true);
+  });
+
+  it('grants native VIPM (VI) builds a longer liveliness timeout', async () => {
+    const { deps, captured } = makeHarness({ settings: nativeSettings, exitCode: 0 });
+    await runBuildPackage({ fsPath: 'C:\\w\\a.vipb' }, undefined, deps);
+    expect(captured.runEnvs[0]).toEqual({ VIPM_DESKTOP_LIVELINESS_TIMEOUT: '600' });
+  });
+
+  it('sets no liveliness timeout for NI (NipbCli) builds', async () => {
+    const { deps, captured } = makeHarness({ settings: nativeSettings, exitCode: 0 });
+    await runBuildPackage({ fsPath: 'C:\\w\\Solution.pbs' }, undefined, deps);
+    expect(captured.runEnvs[0]).toBeUndefined();
+  });
+
+  it('sets no liveliness timeout for container (docker) builds', async () => {
+    const { deps, captured } = makeHarness({ pick: (providers) => providers[1], exitCode: 0 });
+    await runBuildPackage({ fsPath: 'C:\\w\\a.vipb' }, undefined, deps);
+    expect(captured.runInvocations[0].command).toBe('docker');
+    expect(captured.runEnvs[0]).toBeUndefined();
   });
 
   it('routes through the docker provider when picked', async () => {

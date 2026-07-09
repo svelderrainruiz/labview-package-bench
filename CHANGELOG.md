@@ -27,6 +27,7 @@ All notable changes to this project are documented here.
 - Build errors are clearer: a missing CLI or Docker (spawn `ENOENT`) explains how to fix it (install it, set `vipm.cliPath` / `nipb.cliPath`, or start Docker Desktop), and a VIPM Community git-repository failure points to opening the repository root or activating VIPM Professional.
 
 ### Fixed
+- Native VIPM (VI) builds no longer abort spuriously on VIPM's short liveliness watchdog. A long, silent mass-compile could trip VIPM's 60 s default even though the `.vip` was still being produced; the extension now runs native `vipm build` with `VIPM_DESKTOP_LIVELINESS_TIMEOUT=600` (the same tolerance the container images bake in). Verified end-to-end against a real spec: the build that previously aborted at 60 s now completes and writes the `.vip`.
 - NI build settings are now honored: `labviewPackageBench.nipb.cliPath` and `nipb.buildArgs` are read from the workspace configuration (the extension previously ignored them and always used the defaults).
 - The **Build Package** menu and package detection now recognize a **bare dotfile spec** (a file named `.vipb` / `.nipb`, as some repositories name their build spec), not only the `Name.vipb` form.
 

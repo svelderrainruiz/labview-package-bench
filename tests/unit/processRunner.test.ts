@@ -53,6 +53,28 @@ describe('nodeProcessRunner', () => {
     expect(code).toBe(0);
     expect(output).toBe('');
   });
+
+  it('passes extra env vars to the child, merged over the inherited process env', async () => {
+    process.env.LVPB_INHERITED = 'inherited-value';
+    let out = '';
+    try {
+      const code = await nodeProcessRunner.run(
+        {
+          command: process.execPath,
+          args: [
+            '-e',
+            'process.stdout.write(`${process.env.LVPB_EXTRA}|${process.env.LVPB_INHERITED}`)'
+          ]
+        },
+        { onOutput: (chunk) => (out += chunk), env: { LVPB_EXTRA: 'extra-value' } }
+      );
+      expect(code).toBe(0);
+    } finally {
+      delete process.env.LVPB_INHERITED;
+    }
+    // The extra var reaches the child and the inherited env is preserved.
+    expect(out).toBe('extra-value|inherited-value');
+  });
 });
 
 // Cancelling a Docker build must stop the container, not just the docker client
