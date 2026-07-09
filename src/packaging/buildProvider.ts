@@ -23,5 +23,9 @@ export interface BuildProvider {
   /** Package types this environment can build. NI packages require the NI
    * Package Builder CLI, which only the native Windows host provides today. */
   supportedPackageTypes: readonly PackageType[];
+  /** Optional advisory logged when this environment runs a build — e.g. to flag
+   * that in-container package building is an upstream preview that may not
+   * complete, so the native host stays the verified path. */
+  buildNote?: string;
   resolveInvocation(context: ProviderBuildContext): CommandInvocation;
 }
