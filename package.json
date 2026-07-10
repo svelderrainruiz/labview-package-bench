@@ -2,7 +2,7 @@
   "name": "labview-package-bench",
   "displayName": "LabVIEW Package Bench",
   "description": "Build VI and NI packages from .vipb and .pbs build specs across isolated LabVIEW environments, orchestrated from VS Code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "svelderrainruiz",
   "license": "0BSD",
   "private": true,
