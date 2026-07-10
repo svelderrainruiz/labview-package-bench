@@ -47,6 +47,9 @@ Choose a build environment:
   - Run VS Code **elevated (Run as administrator)** so VIPM runs at the same privilege as LabVIEW
     and can persist that VI Server configuration under `C:\Program Files`. Without matching
     elevation, VIPM fails with a VI Server "Exported VIs / Machine Access" error.
+  - Long builds are covered automatically: native VI builds run VIPM with a 600 s liveliness
+    timeout (`VIPM_DESKTOP_LIVELINESS_TIMEOUT`) so a long, silent mass-compile is not aborted by
+    VIPM's short default watchdog while the `.vip` is still being produced.
 - **`docker-linux` (recommended, proven):** Docker plus the baked NI LabVIEW Linux image
   (`npm run image:build:linux`). Works on Codespaces, Linux CI, and local Docker. VIPM Community
   Edition requires the `.vipb` to live inside a **public git repository**.
@@ -65,6 +68,7 @@ The extension's command construction is unit-tested on Linux; execution needs th
 | `labviewPackageBench.labview.bitness` | `64` | LabVIEW bitness (`--labview-bitness`). |
 | `labviewPackageBench.vipm.cliPath` | `vipm` | Path to the VIPM CLI executable (native providers). On Windows, `vipm` resolves on `PATH`; otherwise set the full path (default install: `C:\Program Files\JKI\VI Package Manager\support\vipm.exe`). |
 | `labviewPackageBench.vipm.buildArgs` | `["build", "${specPath}", "--labview-version", "${labviewVersion}", "--labview-bitness", "${labviewBitness}", "--show-progress", "--verbose"]` | VIPM CLI argument template; `${specPath}`, `${labviewVersion}`, `${labviewBitness}` are substituted. |
+| `labviewPackageBench.vipm.overwriteExisting` | `false` | When a native VI build fails because the package already exists in the build output location (VIPM has no overwrite flag), delete that `.vip` — found by walking from the build spec up to the repository root — and rebuild once. Off by default because it deletes a build artifact on disk. |
 | `labviewPackageBench.linuxContainer.image` | `labview-package-bench-linux:latest` | NI LabVIEW Linux image (VIPM baked in) used by `docker-linux`. |
 | `labviewPackageBench.linuxContainer.cacheVolume` | `labview-package-bench-vipm-cache` | Docker volume for the VIPM package cache (faster repeat `refresh`); empty to disable. |
 | `labviewPackageBench.docker.image` | `labview-package-bench-windows:latest` | Windows container image used by `docker-windows`. |
