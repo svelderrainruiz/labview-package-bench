@@ -271,22 +271,37 @@ function findProjectLabviewYear(
   return undefined;
 }
 
+/** The value passed to `--labview-version` in a resolved invocation (native, or
+ * wrapped in `docker run`), or undefined when the command carries no version
+ * flag — so the advisory reflects the actual build, not the raw setting. */
+function labviewVersionFromArgs(args: string[]): string | undefined {
+  const index = args.indexOf('--labview-version');
+  return index >= 0 && index + 1 < args.length ? args[index + 1] : undefined;
+}
+
 /** Advises only about the failing direction: a project whose `.lvversion` targets
- * a LabVIEW *newer* than the build version can fail (LabVIEW builds older code
- * with a newer version, but not the reverse). Silent when the project targets an
- * equal/older version, or has no `.lvversion`. */
+ * a LabVIEW *newer* than the version the command actually builds with can fail
+ * (LabVIEW builds older code with a newer version, but not the reverse). Silent
+ * when the build carries no `--labview-version`, when the project targets an
+ * equal/older version, or when there is no `.lvversion`. */
 function describeLabviewVersionMismatch(
   specDir: string,
   mountRoot: string,
-  buildVersion: string,
+  buildVersion: string | undefined,
   readText: (path: string) => string | undefined
 ): string | undefined {
-  const projectYear = findProjectLabviewYear(specDir, mountRoot, readText);
-  const buildYear = Number(buildVersion);
-  if (projectYear === undefined || !Number.isFinite(buildYear) || projectYear <= buildYear) {
+  if (!buildVersion) {
     return undefined;
   }
-  return `this project targets LabVIEW ${projectYear} (.lvversion) but the build uses ${buildYear}. Building newer code with an older LabVIEW can fail — set labviewPackageBench.labview.version to ${projectYear} or newer.`;
+  const buildYear = Number(buildVersion);
+  if (!Number.isFinite(buildYear)) {
+    return undefined;
+  }
+  const projectYear = findProjectLabviewYear(specDir, mountRoot, readText);
+  if (projectYear === undefined || projectYear <= buildYear) {
+    return undefined;
+  }
+  return `this project targets LabVIEW ${projectYear} (.lvversion) but the build uses ${buildYear}. Building newer code with an older LabVIEW can fail — build with LabVIEW ${projectYear} or newer (labviewPackageBench.labview.version).`;
 }
 
 export async function runBuildPackage(
@@ -341,7 +356,7 @@ export async function runBuildPackage(
       ? describeLabviewVersionMismatch(
           plan.specDir,
           mountRoot,
-          settings.labview.version,
+          labviewVersionFromArgs(plan.invocation.args),
           deps.readTextFile
         )
       : undefined;

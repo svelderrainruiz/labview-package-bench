@@ -515,4 +515,35 @@ describe('runBuildPackage', () => {
     await runBuildPackage({ fsPath: 'C:\\w\\Solution.pbs' }, undefined, deps);
     expect(captured.lines.some((line) => line.includes('.lvversion'))).toBe(false);
   });
+
+  it('skips the .lvversion advisory when the build args carry no --labview-version', async () => {
+    const settings = normalizePackageBenchSettings({
+      defaultProvider: 'native-windows',
+      vipm: { buildArgs: ['build', '${specPath}'] }
+    });
+    const { deps, captured } = makeHarness({
+      settings,
+      mountRoot: 'C:\\w',
+      exitCode: 0,
+      files: { 'C:\\w\\.lvversion': '27.0\r\n' }
+    });
+    await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(captured.lines.some((line) => line.includes('.lvversion'))).toBe(false);
+  });
+
+  it('bases the .lvversion advisory on the actual --labview-version, not the setting', async () => {
+    const settings = normalizePackageBenchSettings({
+      defaultProvider: 'native-windows',
+      vipm: { buildArgs: ['build', '${specPath}', '--labview-version', '2030'] }
+    });
+    const { deps, captured } = makeHarness({
+      settings,
+      mountRoot: 'C:\\w',
+      exitCode: 0,
+      // 2027 <= the command's actual 2030 -> silent (the default 2026 setting would have warned).
+      files: { 'C:\\w\\.lvversion': '27.0\r\n' }
+    });
+    await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(captured.lines.some((line) => line.includes('.lvversion'))).toBe(false);
+  });
 });
