@@ -31,6 +31,7 @@ export function createDockerLinuxProvider(settings: LinuxContainerSettings): Bui
     supportedPackageTypes: ['vi'],
     buildNote:
       'In-container package building on Linux is an upstream VIPM preview (JKI) and may not complete; the native-windows host is the verified build path. This container is proven for dependency install/refresh.',
+    containerWorkdir: CONTAINER_WORKDIR,
     resolveInvocation(context: ProviderBuildContext) {
       const containerSpecPath = `${CONTAINER_WORKDIR}/${relativeFromRoot(
         context.mountRoot,
