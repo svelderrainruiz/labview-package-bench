@@ -26,3 +26,15 @@ CONTRIBUTING.md
 package-lock.json
 *.vsix
 **/.DS_Store
+
+# Never ship credential-looking files (belt-and-suspenders with scripts/guardPublishSecrets.js)
+**/PAT.txt
+**/*.pat
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/id_rsa
+.env
+.env.*
+!.env.example

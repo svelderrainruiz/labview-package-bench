@@ -179,7 +179,8 @@
   },
   "scripts": {
     "clean": "rimraf out coverage",
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run guard:secrets && npm run compile",
+    "guard:secrets": "node scripts/guardPublishSecrets.js",
     "package": "vsce package",
     "compile": "tsc -p .",
     "watch": "tsc -p . --watch",
