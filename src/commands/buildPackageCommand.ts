@@ -23,7 +23,9 @@ export interface BuildPackageDeps {
   pickProvider(providers: BuildProvider[]): Promise<BuildProvider | undefined>;
   runner: ProcessRunner;
   log: BuildLog;
-  showInfo(message: string): void;
+  /** Success notification. When `revealPath` is set, the UI may offer to reveal
+   * or copy the built artifact. */
+  showInfo(message: string, revealPath?: string): void;
   showError(message: string): void;
   /** Whether a filesystem path exists (injected so artifact cleanup is testable). */
   pathExists(path: string): boolean;
@@ -47,7 +49,7 @@ export type BuildOutcome =
   | { status: 'unsupported' }
   | { status: 'deferred' }
   | { status: 'cancelled' }
-  | { status: 'succeeded'; exitCode: number }
+  | { status: 'succeeded'; exitCode: number; artifactPath?: string }
   | { status: 'failed'; exitCode: number }
   | { status: 'error'; message: string };
 
@@ -129,6 +131,22 @@ function describeBuildFailure(output: string): string | undefined {
     return `${which} already exists in the build output location and VIPM will not overwrite it. Delete the existing .vip, or raise the version in the build spec, then build again.`;
   }
   return undefined;
+}
+
+/** Pulls the built package path out of the tool output: VIPM lists the `.vip`
+ * under "Generated files:" and NipbCli prints the produced `.nipkg`. Accepts
+ * only a bare absolute path on its own line (so a `prefix: path` log line can't
+ * be misparsed) and returns the last match, so the produced artifact wins over
+ * any spec path echoed earlier. Undefined when no such line is present. */
+function extractBuiltArtifactPath(output: string): string | undefined {
+  let found: string | undefined;
+  for (const rawLine of output.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (/^(?:[A-Za-z]:[\\/]|[\\/]).*\.(?:vip|nipkg)$/i.test(line)) {
+      found = line;
+    }
+  }
+  return found;
 }
 
 /** Walks from the spec directory up to the mount root (inclusive), returning the
@@ -277,9 +295,16 @@ export async function runBuildPackage(
     }
 
     if (exitCode === 0) {
+      const artifactPath = extractBuiltArtifactPath(outputTail);
       deps.log.appendLine('\nBuild succeeded.');
-      deps.showInfo(`${kind} build succeeded: ${baseName(specPath)}`);
-      return { status: 'succeeded', exitCode };
+      if (artifactPath) {
+        deps.log.appendLine(`Package: ${artifactPath}`);
+      }
+      deps.showInfo(
+        `${kind} build succeeded: ${baseName(artifactPath ?? specPath)}`,
+        artifactPath
+      );
+      return { status: 'succeeded', exitCode, artifactPath };
     }
 
     deps.log.appendLine(`\nBuild failed (exit code ${exitCode}).`);

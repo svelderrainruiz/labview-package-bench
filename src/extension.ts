@@ -70,8 +70,20 @@ export function activate(
     pickProvider: pickBuildProvider,
     runner: nodeProcessRunner,
     log: createOutputChannelBuildLog(channel),
-    showInfo: (message) => {
-      void vscode.window.showInformationMessage(message);
+    showInfo: (message, revealPath) => {
+      if (!revealPath) {
+        void vscode.window.showInformationMessage(message);
+        return;
+      }
+      void vscode.window
+        .showInformationMessage(message, 'Reveal in Explorer', 'Copy Path')
+        .then((choice) => {
+          if (choice === 'Reveal in Explorer') {
+            void vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(revealPath));
+          } else if (choice === 'Copy Path') {
+            void vscode.env.clipboard.writeText(revealPath);
+          }
+        });
     },
     showError: (message) => {
       void vscode.window.showErrorMessage(message);

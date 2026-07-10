@@ -38,6 +38,7 @@ function makeHarness(options: HarnessOptions = {}) {
     runInvocations: [] as CommandInvocation[],
     runEnvs: [] as (Record<string, string> | undefined)[],
     deleted: [] as string[],
+    revealPaths: [] as string[],
     cleared: 0,
     shown: 0
   };
@@ -78,7 +79,12 @@ function makeHarness(options: HarnessOptions = {}) {
         captured.shown += 1;
       }
     },
-    showInfo: (message) => captured.info.push(message),
+    showInfo: (message, revealPath) => {
+      captured.info.push(message);
+      if (revealPath) {
+        captured.revealPaths.push(revealPath);
+      }
+    },
     showError: (message) => captured.errors.push(message),
     pathExists: (path: string) => (options.existingArtifacts ?? []).includes(path),
     deleteFile: (path: string) => {
@@ -381,5 +387,41 @@ describe('runBuildPackage', () => {
     expect(
       captured.lines.some((line) => line.includes('Could not remove the existing package'))
     ).toBe(true);
+  });
+
+  it('surfaces the built .vip path on success (reveal + log + outcome)', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      exitCode: 0,
+      output:
+        'Built project: C:\\w\\src\\a.vipb\nGenerated files:\n  C:\\w\\vi_technologies_lib_super_network_streams-2.0.0.23.vip\nBuild completed in 137.4s\n'
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({
+      status: 'succeeded',
+      exitCode: 0,
+      artifactPath: 'C:\\w\\vi_technologies_lib_super_network_streams-2.0.0.23.vip'
+    });
+    expect(captured.revealPaths).toEqual([
+      'C:\\w\\vi_technologies_lib_super_network_streams-2.0.0.23.vip'
+    ]);
+    expect(captured.info[0]).toContain('vi_technologies_lib_super_network_streams-2.0.0.23.vip');
+    expect(
+      captured.lines.some((line) =>
+        line.includes('Package: C:\\w\\vi_technologies_lib_super_network_streams-2.0.0.23.vip')
+      )
+    ).toBe(true);
+  });
+
+  it('falls back to the spec name when the output has no artifact path', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      exitCode: 0,
+      output: 'done, no path here\n'
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({ status: 'succeeded', exitCode: 0 });
+    expect(captured.revealPaths).toEqual([]);
+    expect(captured.info[0]).toContain('a.vipb');
   });
 });
