@@ -4,7 +4,7 @@ import {
   detectPackageType,
   type PackageBuildRequest
 } from '../packaging/packageBuildRequest';
-import { baseName, joinWindowsPath, parentDir } from '../packaging/pathUtil';
+import { baseName, joinWindowsPath, parentDir, toPosix } from '../packaging/pathUtil';
 import type { PackageBenchSettings } from '../packaging/settings';
 import type { BuildProvider } from '../packaging/buildProvider';
 import { buildNipbInvocation } from '../packaging/niPackageBuild';
@@ -147,6 +147,38 @@ function extractBuiltArtifactPath(output: string): string | undefined {
     }
   }
   return found;
+}
+
+/** Translates a build-tool artifact path to a path on the VS Code host. Native
+ * builds already print host paths (no `containerWorkdir`); container providers
+ * print a path under their bind-mounted workdir, which maps back onto
+ * `mountRoot`. Returns undefined for a container path outside the workdir, so a
+ * non-host path is never handed to "Reveal in Explorer"/"Copy Path". */
+export function resolveHostArtifactPath(
+  rawPath: string | undefined,
+  containerWorkdir: string | undefined,
+  mountRoot: string
+): string | undefined {
+  if (!rawPath) {
+    return undefined;
+  }
+  if (!containerWorkdir) {
+    return rawPath;
+  }
+  const workdir = toPosix(containerWorkdir).replace(/\/+$/, '');
+  const raw = toPosix(rawPath);
+  if (raw !== workdir && !raw.startsWith(`${workdir}/`)) {
+    return undefined;
+  }
+  const relative = raw.slice(workdir.length).replace(/^\/+/, '');
+  if (!relative) {
+    return undefined;
+  }
+  const hostUsesBackslash = mountRoot.includes('\\');
+  const trimmedRoot = mountRoot.replace(/[\\/]+$/, '');
+  const separator = hostUsesBackslash ? '\\' : '/';
+  const hostRelative = hostUsesBackslash ? relative.replace(/\//g, '\\') : relative;
+  return `${trimmedRoot}${separator}${hostRelative}`;
 }
 
 /** Walks from the spec directory up to the mount root (inclusive), returning the
@@ -295,7 +327,11 @@ export async function runBuildPackage(
     }
 
     if (exitCode === 0) {
-      const artifactPath = extractBuiltArtifactPath(outputTail);
+      const artifactPath = resolveHostArtifactPath(
+        extractBuiltArtifactPath(outputTail),
+        provider.containerWorkdir,
+        mountRoot
+      );
       deps.log.appendLine('\nBuild succeeded.');
       if (artifactPath) {
         deps.log.appendLine(`Package: ${artifactPath}`);

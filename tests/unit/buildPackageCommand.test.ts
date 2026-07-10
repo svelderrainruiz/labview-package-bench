@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   extractSpecPath,
   planBuildInvocation,
+  resolveHostArtifactPath,
   runBuildPackage,
   type BuildPackageDeps
 } from '../../src/commands/buildPackageCommand';
@@ -138,6 +139,40 @@ describe('planBuildInvocation', () => {
     const [native] = getBuildProviders(DEFAULT_SETTINGS);
     const plan = planBuildInvocation('C:\\w\\Solution.pbs', 'C:\\w', native, DEFAULT_SETTINGS);
     expect(plan.env).toBeUndefined();
+  });
+});
+
+describe('resolveHostArtifactPath', () => {
+  it('returns a native (host) path unchanged', () => {
+    expect(resolveHostArtifactPath('C:\\repo\\pkg-1.0.0.0.vip', undefined, 'C:\\repo')).toBe(
+      'C:\\repo\\pkg-1.0.0.0.vip'
+    );
+  });
+
+  it('maps a docker-linux container path back onto a Windows host mount root', () => {
+    expect(resolveHostArtifactPath('/work/builds/pkg.vip', '/work', 'C:\\dev\\repo')).toBe(
+      'C:\\dev\\repo\\builds\\pkg.vip'
+    );
+  });
+
+  it('maps a docker-windows container path back onto the host mount root', () => {
+    expect(
+      resolveHostArtifactPath('C:\\work\\builds\\pkg.vip', 'C:\\work', 'C:\\dev\\repo')
+    ).toBe('C:\\dev\\repo\\builds\\pkg.vip');
+  });
+
+  it('maps onto a POSIX host mount root', () => {
+    expect(resolveHostArtifactPath('/work/pkg.vip', '/work', '/home/me/repo')).toBe(
+      '/home/me/repo/pkg.vip'
+    );
+  });
+
+  it('returns undefined for a container path outside the workdir', () => {
+    expect(resolveHostArtifactPath('/tmp/pkg.vip', '/work', '/home/me/repo')).toBeUndefined();
+  });
+
+  it('returns undefined when there is no artifact path', () => {
+    expect(resolveHostArtifactPath(undefined, undefined, 'C:\\repo')).toBeUndefined();
   });
 });
 
@@ -423,5 +458,22 @@ describe('runBuildPackage', () => {
     expect(outcome).toEqual({ status: 'succeeded', exitCode: 0 });
     expect(captured.revealPaths).toEqual([]);
     expect(captured.info[0]).toContain('a.vipb');
+  });
+
+  it('surfaces a docker-linux container artifact as a host path', async () => {
+    const settings = normalizePackageBenchSettings({ defaultProvider: 'docker-linux' });
+    const { deps, captured } = makeHarness({
+      settings,
+      mountRoot: 'C:\\dev\\repo',
+      exitCode: 0,
+      output: 'Generated files:\n  /work/vi_lib_foo-1.0.0.0.vip\nBuild completed\n'
+    });
+    const outcome = await runBuildPackage({ fsPath: 'C:\\dev\\repo\\src\\a.vipb' }, undefined, deps);
+    expect(outcome).toEqual({
+      status: 'succeeded',
+      exitCode: 0,
+      artifactPath: 'C:\\dev\\repo\\vi_lib_foo-1.0.0.0.vip'
+    });
+    expect(captured.revealPaths).toEqual(['C:\\dev\\repo\\vi_lib_foo-1.0.0.0.vip']);
   });
 });
