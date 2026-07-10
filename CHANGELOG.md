@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-07-10
+
 ### Added
 - Initial extension scaffold: **Build Package** command on `.vipb` / `.nipb` context menus.
 - On a successful build the produced package path is parsed from the tool output, logged (`Package: …`), and named in the success notification, which offers **Reveal in Explorer** and **Copy Path** so the built `.vip` / `.nipkg` is one click away.
