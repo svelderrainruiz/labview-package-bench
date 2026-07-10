@@ -92,6 +92,13 @@ export function activate(
     deleteFile: (candidate) => {
       fs.rmSync(candidate, { force: true });
     },
+    readTextFile: (candidate) => {
+      try {
+        return fs.readFileSync(candidate, 'utf8');
+      } catch {
+        return undefined;
+      }
+    },
     ...depsOverrides
   };
 

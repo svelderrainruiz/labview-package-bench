@@ -22,6 +22,15 @@ export function joinWindowsPath(directory: string, name: string): string {
   return `${trimmed}\\${name}`;
 }
 
+/** Joins `name` onto `directory` using the separator the directory already uses
+ * (backslash if it contains one, else forward slash), so it works for both
+ * Windows host paths and POSIX paths without importing `node:path`. */
+export function joinPath(directory: string, name: string): string {
+  const trimmed = directory.replace(/[\\/]+$/, '');
+  const separator = /\\/.test(trimmed) ? '\\' : '/';
+  return `${trimmed}${separator}${name}`;
+}
+
 export function toPosix(inputPath: string): string {
   return inputPath.replace(/\\/g, '/');
 }

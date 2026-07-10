@@ -28,6 +28,7 @@ interface HarnessOptions {
   mountRoot?: string;
   existingArtifacts?: string[];
   deleteThrows?: string;
+  files?: Record<string, string>;
 }
 
 function makeHarness(options: HarnessOptions = {}) {
@@ -93,7 +94,8 @@ function makeHarness(options: HarnessOptions = {}) {
       if (options.deleteThrows) {
         throw new Error(options.deleteThrows);
       }
-    }
+    },
+    readTextFile: (path: string) => options.files?.[path]
   };
 
   return { deps, captured, runner, pickProvider };
@@ -475,5 +477,73 @@ describe('runBuildPackage', () => {
       artifactPath: 'C:\\dev\\repo\\vi_lib_foo-1.0.0.0.vip'
     });
     expect(captured.revealPaths).toEqual(['C:\\dev\\repo\\vi_lib_foo-1.0.0.0.vip']);
+  });
+
+  it('warns when the project .lvversion targets a newer LabVIEW than the build', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      mountRoot: 'C:\\w',
+      exitCode: 0,
+      files: { 'C:\\w\\.lvversion': '27.0\r\n' }
+    });
+    await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(
+      captured.lines.some(
+        (line) => line.includes('targets LabVIEW 2027') && line.includes('2026')
+      )
+    ).toBe(true);
+  });
+
+  it('stays silent when .lvversion targets an older LabVIEW (forward-compatible)', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      mountRoot: 'C:\\w',
+      exitCode: 0,
+      files: { 'C:\\w\\.lvversion': '20.0\r\n' }
+    });
+    await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(captured.lines.some((line) => line.includes('.lvversion'))).toBe(false);
+  });
+
+  it('does not warn about .lvversion for an NI build', async () => {
+    const { deps, captured } = makeHarness({
+      settings: nativeSettings,
+      mountRoot: 'C:\\w',
+      exitCode: 0,
+      files: { 'C:\\w\\.lvversion': '27.0\r\n' }
+    });
+    await runBuildPackage({ fsPath: 'C:\\w\\Solution.pbs' }, undefined, deps);
+    expect(captured.lines.some((line) => line.includes('.lvversion'))).toBe(false);
+  });
+
+  it('skips the .lvversion advisory when the build args carry no --labview-version', async () => {
+    const settings = normalizePackageBenchSettings({
+      defaultProvider: 'native-windows',
+      vipm: { buildArgs: ['build', '${specPath}'] }
+    });
+    const { deps, captured } = makeHarness({
+      settings,
+      mountRoot: 'C:\\w',
+      exitCode: 0,
+      files: { 'C:\\w\\.lvversion': '27.0\r\n' }
+    });
+    await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(captured.lines.some((line) => line.includes('.lvversion'))).toBe(false);
+  });
+
+  it('bases the .lvversion advisory on the actual --labview-version, not the setting', async () => {
+    const settings = normalizePackageBenchSettings({
+      defaultProvider: 'native-windows',
+      vipm: { buildArgs: ['build', '${specPath}', '--labview-version', '2030'] }
+    });
+    const { deps, captured } = makeHarness({
+      settings,
+      mountRoot: 'C:\\w',
+      exitCode: 0,
+      // 2027 <= the command's actual 2030 -> silent (the default 2026 setting would have warned).
+      files: { 'C:\\w\\.lvversion': '27.0\r\n' }
+    });
+    await runBuildPackage({ fsPath: 'C:\\w\\src\\a.vipb' }, undefined, deps);
+    expect(captured.lines.some((line) => line.includes('.lvversion'))).toBe(false);
   });
 });
