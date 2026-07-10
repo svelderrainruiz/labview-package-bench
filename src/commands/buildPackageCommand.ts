@@ -4,7 +4,7 @@ import {
   detectPackageType,
   type PackageBuildRequest
 } from '../packaging/packageBuildRequest';
-import { baseName, joinWindowsPath, parentDir, toPosix } from '../packaging/pathUtil';
+import { baseName, joinPath, joinWindowsPath, parentDir, toPosix } from '../packaging/pathUtil';
 import type { PackageBenchSettings } from '../packaging/settings';
 import type { BuildProvider } from '../packaging/buildProvider';
 import { buildNipbInvocation } from '../packaging/niPackageBuild';
@@ -31,6 +31,9 @@ export interface BuildPackageDeps {
   pathExists(path: string): boolean;
   /** Deletes a file, throwing on failure (injected so artifact cleanup is testable). */
   deleteFile(path: string): void;
+  /** Reads a UTF-8 text file, or undefined when it is missing/unreadable
+   * (injected so the `.lvversion` advisory is testable). */
+  readTextFile(path: string): string | undefined;
 }
 
 export interface BuildPlan {
@@ -227,6 +230,65 @@ function cleanExistingArtifact(
   return existing;
 }
 
+/** Parses a `.lvversion` value into a LabVIEW release year: the internal major
+ * (`20.0` -> 2020) or an already-4-digit year (`2020`). Undefined otherwise. */
+function parseLabviewYear(content: string): number | undefined {
+  const match = /(\d{1,4})/.exec(content.trim());
+  if (!match) {
+    return undefined;
+  }
+  const value = Number(match[1]);
+  if (value >= 1900) {
+    return value;
+  }
+  if (value >= 6 && value <= 99) {
+    return 2000 + value;
+  }
+  return undefined;
+}
+
+/** Reads the nearest `.lvversion` (walking the spec dir up to the mount root) and
+ * returns the LabVIEW year the project targets, or undefined when none is found. */
+function findProjectLabviewYear(
+  specDir: string,
+  mountRoot: string,
+  readText: (path: string) => string | undefined
+): number | undefined {
+  let current = specDir;
+  let previous = '';
+  for (let depth = 0; depth < 16 && current && current !== previous; depth += 1) {
+    const content = readText(joinPath(current, '.lvversion'));
+    const year = content ? parseLabviewYear(content) : undefined;
+    if (year !== undefined) {
+      return year;
+    }
+    if (current === mountRoot) {
+      break;
+    }
+    previous = current;
+    current = parentDir(current);
+  }
+  return undefined;
+}
+
+/** Advises only about the failing direction: a project whose `.lvversion` targets
+ * a LabVIEW *newer* than the build version can fail (LabVIEW builds older code
+ * with a newer version, but not the reverse). Silent when the project targets an
+ * equal/older version, or has no `.lvversion`. */
+function describeLabviewVersionMismatch(
+  specDir: string,
+  mountRoot: string,
+  buildVersion: string,
+  readText: (path: string) => string | undefined
+): string | undefined {
+  const projectYear = findProjectLabviewYear(specDir, mountRoot, readText);
+  const buildYear = Number(buildVersion);
+  if (projectYear === undefined || !Number.isFinite(buildYear) || projectYear <= buildYear) {
+    return undefined;
+  }
+  return `this project targets LabVIEW ${projectYear} (.lvversion) but the build uses ${buildYear}. Building newer code with an older LabVIEW can fail — set labviewPackageBench.labview.version to ${projectYear} or newer.`;
+}
+
 export async function runBuildPackage(
   target: unknown,
   activeEditorPath: string | undefined,
@@ -273,6 +335,18 @@ export async function runBuildPackage(
   );
   if (provider.buildNote) {
     deps.log.appendLine(`Note: ${provider.buildNote}`);
+  }
+  const versionAdvisory =
+    packageType === 'vi'
+      ? describeLabviewVersionMismatch(
+          plan.specDir,
+          mountRoot,
+          settings.labview.version,
+          deps.readTextFile
+        )
+      : undefined;
+  if (versionAdvisory) {
+    deps.log.appendLine(`Note: ${versionAdvisory}`);
   }
   deps.log.appendLine(`> ${renderInvocation(plan.invocation)}`);
 
